@@ -1,0 +1,638 @@
+= Debezium with Kafka Connect
+include::_attributes.adoc[]
+
+Debezium is often deployed in the context of Apache Kafka and Kafka Connect.
+
+image::dbz-connect-deployment.png["Debezium Deployment Mode with Kafka Connect"]
+
+The following exercise shows and explains how to configure a Debezium Source Connector for postgreSQL. The resulting CDC pipeline will capture all data change events that are occurring in a postgreSQL database table and propagate these changes into an Apache Kafka topic. The following illustration shows the overview and data flow of the demo scenario.
+
+**TODO: add picture here...**
+
+The example will be based on running all required data infrastructure components as containers locally, either with Podman or Docker. **It's important to note, that all containers are configured as _single ephemeral instances_ which means that all state and data is lost after shutting them down!**
+
+
+== Start required services as containers
+
+Launch the following 4 containers each in its separate terminal window. This will allow to easily inspect their respective logs individually while working through the demo scenario step-by-step.
+
+=== 1. Zookeeper
+
+[tabs]
+====
+Podman::
++
+--
+First, let's start 1 pod which will host all containers needed for this demo scenario.
+
+[.console-input]
+[source,adoc]
+----
+podman pod create --name=dbz -p 9092:9092 -p 8083:8083 -p 5432:5432
+----
+
+Then run the Zookeeper container in this pod as follows
+
+[.console-input]
+[source,adoc]
+----
+podman run -it --rm --name zookeeper --pod dbz quay.io/debezium/zookeeper:2.2
+----
+--
+Docker::
++
+--
+[.console-input]
+[source,adoc]
+----
+docker run -it --rm --name zookeeper -p 2181:2181 -p 2888:2888 -p 3888:3888 quay.io/debezium/zookeeper:2.2
+----
+--
+==== 
+
+=== 2. Kafka
+
+[tabs]
+====
+Podman::
++
+--
+[.console-input]
+[source,adoc]
+----
+podman run -it --rm --name kafka --pod dbz quay.io/debezium/kafka:2.2
+----
+--
+Docker::
++
+--
+[.console-input]
+[source,adoc]
+----
+docker run -it --rm --name kafka -p 9092:9092 --link zookeeper:zookeeper quay.io/debezium/kafka:2.2
+----
+--
+==== 
+
+=== 3. postgreSQL
+
+[tabs]
+====
+Podman::
++
+--
+[.console-input]
+[source,adoc]
+----
+podman run -it --rm --name postgres --pod dbz -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2
+----
+--
+Docker::
++
+--
+[.console-input]
+[source,adoc]
+----
+docker run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2
+----
+--
+==== 
+
+=== 4. Kafka Connect
+
+[tabs]
+====
+Podman::
++
+--
+[.console-input]
+[source,adoc]
+----
+podman run -it --rm --name connect --pod dbz -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses quay.io/debezium/connect:2.2
+----
+--
+Docker::
++
+--
+[.console-input]
+[source,adoc]
+----
+docker run -it --rm --name connect -p 8083:8083 -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses --link kafka:kafka --link postgres:postgres quay.io/debezium/connect:2.2
+----
+--
+==== 
+
+== Check the database and Kafka Connect
+
+=== 1. Run pg CLI and inspect the sample database table
+
+[tabs]
+====
+Podman::
++
+--
+[.console-input]
+[source,adoc]
+----
+#exec into the db container's bash
+podman exec -it postgres bash
+
+#in the container's bash start pg cli
+psql -h localhost -p 5432 -U postgres postgres
+
+#run this query in the pg cli to show all customer records
+SELECT * FROM inventory.customers;
+----
+[.console-output]
+[source,adoc]
+----
+  id  | first_name | last_name |         email
+------+------------+-----------+-----------------------
+ 1001 | Sally      | Thomas    | sally.thomas@acme.com
+ 1002 | George     | Bailey    | gbailey@foobar.com
+ 1003 | Edward     | Walker    | ed@walker.com
+ 1004 | Anne       | Kretchmar | annek@noanswer.org
+(4 rows)
+----
+--
+Docker::
++
+--
+[.console-input]
+[source,adoc]
+----
+#exec into the db container's bash
+docker exec -it postgres bash
+
+#in the container's bash start pg cli
+psql -h localhost -p 5432 -U postgres postgres
+
+#run this query in the pg cli to show all customer records
+SELECT * FROM inventory.customers;
+----
+[.console-output]
+[source,adoc]
+----
+  id  | first_name | last_name |         email
+------+------------+-----------+-----------------------
+ 1001 | Sally      | Thomas    | sally.thomas@acme.com
+ 1002 | George     | Bailey    | gbailey@foobar.com
+ 1003 | Edward     | Walker    | ed@walker.com
+ 1004 | Anne       | Kretchmar | annek@noanswer.org
+(4 rows)
+----
+--
+==== 
+
+The terminal which is running the pg CLI session should be kept open for later use!
+
+=== 2. Check Kafka Connect REST API
+
+In a separate terminal window make the following two HTTP calls against the Kafka Connect REST API endpoints to make sure everything is up and running fine.
+
+[.console-input]
+[source,adoc]
+----
+curl -H "Accept:application/json" localhost:8083/
+----
+
+[.console-output]
+[source,adoc]
+----
+{"version":"3.4.0","commit":"2e1947d240607d53","kafka_cluster_id":"BCez9UHGS-eBpmZ8eBZd6g"}
+----
+
+[.console-input]
+[source,adoc]
+----
+curl -H "Accept:application/json" localhost:8083/connectors/
+----
+
+[.console-output]
+[source,adoc]
+----
+[]
+----
+
+== Run Debezium Source Connector
+
+=== 1. Register Debezium postgreSQL source connector
+
+The following configuration instructs Kafka Connect to instantiate the Debezium postgreSQL source connector. Based on the settings it will take a snapshot and then keeps listening to any changes occurring in the `inventory.customers` table. To keep things simple for now, all CDC events will be JSON encoded without any schema information attached.
+
+```json
+{
+  "name": "inventory-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable":false,
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable":false,
+    "tasks.max": "1",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "postgres",
+    "database.dbname": "postgres",
+    "topic.prefix": "dbserver1",
+    "schema.include.list": "inventory",
+    "table.include.list": "inventory.customers"
+  }
+}
+```
+
+Let's run this configuration against the Kafka Connect REST API endpoint by sending a POST request.
+
+[.console-input]
+[source,adoc]
+----
+curl -i -X POST -H "Accept:application/json" -H "Content-Type:application/json" localhost:8083/connectors/ -d '{ "name": "inventory-connector", "config": { "connector.class": "io.debezium.connector.postgresql.PostgresConnector", "key.converter": "org.apache.kafka.connect.json.JsonConverter", "key.converter.schemas.enable":false, "value.converter": "org.apache.kafka.connect.json.JsonConverter", "value.converter.schemas.enable":false, "tasks.max": "1", "database.hostname": "postgres", "database.port": "5432", "database.user": "postgres", "database.password": "postgres", "database.dbname" : "postgres", "topic.prefix": "dbserver1", "schema.include.list": "inventory", "table.include.list": "inventory.customers" } }'
+----
+
+[.console-output]
+[source,adoc]
+----
+HTTP/1.1 201 Created
+Date: Wed, 14 Jun 2023 07:29:07 GMT
+Location: http://localhost:8083/connectors/inventory-connector
+Content-Type: application/json
+Content-Length: 635
+Server: Jetty(9.4.48.v20220622)
+
+{"name":"inventory-connector","config":{"connector.class":"io.debezium.connector.postgresql.PostgresConnector","key.converter":"org.apache.kafka.connect.json.JsonConverter","key.converter.schemas.enable":"false","value.converter":"org.apache.kafka.connect.json.JsonConverter","value.converter.schemas.enable":"false","tasks.max":"1","database.hostname":"postgres","database.port":"5432","database.user":"postgres","database.password":"postgres","database.dbname":"postgres","topic.prefix":"dbserver1","schema.include.list":"inventory","table.include.list":"inventory.customers","name":"inventory-connector"},"tasks":[],"type":"source"}
+----
+
+Sending a GET request against the `status` REST API endpoint of this specific connector should show that the connector and 1 task is in `RUNNING` state and thus working fine.
+
+[.console-input]
+[source,adoc]
+----
+curl -i -X GET -H "Accept:application/json" localhost:8083/connectors/inventory-connector/status
+----
+
+[.console-output]
+[source,adoc]
+----
+HTTP/1.1 200 OK
+Date: Wed, 14 Jun 2023 07:16:38 GMT
+Content-Type: application/json
+Content-Length: 175
+Server: Jetty(9.4.48.v20220622)
+
+{"name":"inventory-connector","connector":{"state":"RUNNING","worker_id":"172.17.0.5:8083"},"tasks":[{"id":0,"state":"RUNNING","worker_id":"172.17.0.5:8083"}],"type":"source"}
+----
+
+
+=== 2. View CDC events in Kafka topic
+
+The source connector produced all CDC events captured for the configured postgreSQL table into a corresponding Apache Kafka topic which in this case was named `dbserver1.inventory.customers`. Let's run a container process to consume form this topic and keep listening for future CDC events like so:
+
+[tabs]
+====
+Podman::
++
+--
+[.console-input]
+[source,adoc]
+----
+podman run -it --rm --name watcher --pod dbz quay.io/debezium/kafka:2.2 watch-topic -a -k dbserver1.inventory.customers
+----
+--
+Docker::
++
+--
+[.console-input]
+[source,adoc]
+----
+docker run -it --rm --name watcher --link zookeeper:zookeeper --link kafka:kafka quay.io/debezium/kafka:2.2 watch-topic -a -k dbserver1.inventory.customers
+----
+[.console-output]
+[source,adoc]
+----
+{"id":1001}	{"before":null,"after":{"id":1001,"first_name":"Sally","last_name":"Thomas","email":"sally.thomas@acme.com"},"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686727747318,"snapshot":"first","db":"postgres","sequence":"[null,\"34487680\"]","schema":"inventory","table":"customers","txId":768,"lsn":34487680,"xmin":null},"op":"r","ts_ms":1686727747354,"transaction":null}
+{"id":1002}	{"before":null,"after":{"id":1002,"first_name":"George","last_name":"Bailey","email":"gbailey@foobar.com"},"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686727747318,"snapshot":"true","db":"postgres","sequence":"[null,\"34487680\"]","schema":"inventory","table":"customers","txId":768,"lsn":34487680,"xmin":null},"op":"r","ts_ms":1686727747356,"transaction":null}
+{"id":1003}	{"before":null,"after":{"id":1003,"first_name":"Edward","last_name":"Walker","email":"ed@walker.com"},"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686727747318,"snapshot":"true","db":"postgres","sequence":"[null,\"34487680\"]","schema":"inventory","table":"customers","txId":768,"lsn":34487680,"xmin":null},"op":"r","ts_ms":1686727747356,"transaction":null}
+{"id":1004}	{"before":null,"after":{"id":1004,"first_name":"Anne","last_name":"Kretchmar","email":"annek@noanswer.org"},"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686727747318,"snapshot":"last","db":"postgres","sequence":"[null,\"34487680\"]","schema":"inventory","table":"customers","txId":768,"lsn":34487680,"xmin":null},"op":"r","ts_ms":1686727747356,"transaction":null}
+----
+--
+==== 
+
+The console output shows all 4 database table rows have been captured by the initial snapshot that the Debezium source connector performed. Each CDC event is represented with one Kafka record composed of the `key` and `value` parts. Let's inspect the last of the 4 CDC events in detail:
+
+**Key: **All it contains is the tables primary key column(s) (`id`) its actual PK value(s).
+
+```json
+{"id":1004}
+```
+
+**Value: **The value part is more verbose because, besides the actual row values it also contains a bunch of meta-data related to the change event. The `before` field is `null` because for an initial snapshot event (`"op":"r"`) there is no previous state to expose. The `after` field in this case contains the table row's column data as it was during the time the snapshot was taken.
+
+```json
+{
+  "before": null,
+  "after": {
+    "id": 1004,
+    "first_name": "Anne",
+    "last_name": "Kretchmar",
+    "email": "annek@noanswer.org"
+  },
+  "source": {
+    "version": "2.0.1.Final",
+    "connector": "postgresql",
+    "name": "dbserver1",
+    "ts_ms": 1686727747318,
+    "snapshot": "last",
+    "db": "postgres",
+    "sequence": "[null,\"34487680\"]",
+    "schema": "inventory",
+    "table": "customers",
+    "txId": 768,
+    "lsn": 34487680,
+    "xmin": null
+  },
+  "op": "r",
+  "ts_ms": 1686727747356,
+  "transaction": null
+}
+```
+=== 3. Run update statement and inspect CDC events
+
+Switch back to the terminal window running the pg CLI and run a SQL `UPDATE` statement, followed by a `SELECT` to verify the change:
+
+[.console-input]
+[source,adoc]
+----
+UPDATE inventory.customers SET first_name='Anne Marie' WHERE id=1004;
+
+SELECT * FROM inventory.customers;
+----
+[.console-output]
+[source,adoc]
+----
+UPDATE 1
+  id  | first_name | last_name |         email
+------+------------+-----------+-----------------------
+ 1001 | Sally      | Thomas    | sally.thomas@acme.com
+ 1002 | George     | Bailey    | gbailey@foobar.com
+ 1003 | Edward     | Walker    | ed@walker.com
+ 1004 | Anne Marie | Kretchmar | annek@noanswer.org
+(4 rows)
+----
+
+Switch over to the "watcher" terminal window to see that the kafka topic in question did receive this captured data change event:
+
+[.console-output]
+[source,adoc]
+----
+{"id":1004} {"before":{"id":1004,"first_name":"Anne","last_name":"Kretchmar","email":"annek@noanswer.org"},"after":{"id":1004,"first_name":"Anne Marie","last_name":"Kretchmar","email":"annek@noanswer.org"},"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686729166190,"snapshot":"false","db":"postgres","sequence":"[null,\"34488008\"]","schema":"inventory","table":"customers","txId":769,"lsn":34488008,"xmin":null},"op":"u","ts_ms":1686729166517,"transaction":null}
+----
+
+Let's take a closer look at the Kafka record's value part for this CDC event. The main difference here is that we are dealing with an update event (`"op":"u"`). For update events we now have both fields set:
+
+- `before`: contains the database table's row values as they were before the modification
+- `after`: contains the database table's row values as they are now after the modification
+
+```json
+{
+  "before": {
+    "id": 1004,
+    "first_name": "Anne",
+    "last_name": "Kretchmar",
+    "email": "annek@noanswer.org"
+  },
+  "after": {
+    "id": 1004,
+    "first_name": "Anne Marie",
+    "last_name": "Kretchmar",
+    "email": "annek@noanswer.org"
+  },
+  "source": {
+    "version": "2.0.1.Final",
+    "connector": "postgresql",
+    "name": "dbserver1",
+    "ts_ms": 1686729166190,
+    "snapshot": "false",
+    "db": "postgres",
+    "sequence": "[null,\"34488008\"]",
+    "schema": "inventory",
+    "table": "customers",
+    "txId": 769,
+    "lsn": 34488008,
+    "xmin": null
+  },
+  "op": "u",
+  "ts_ms": 1686729166517,
+  "transaction": null
+}
+```
+
+=== 4. Run delete statement and inspect CDC events
+
+Switch back to the terminal window running the pg CLI and run a SQL `DELETE` statement, followed by a `SELECT` to verify the deletion:
+
+[.console-input]
+[source,adoc]
+----
+DELETE FROM inventory.customers WHERE id=1004;
+
+SELECT * FROM inventory.customers;
+----
+[.console-output]
+[source,adoc]
+----
+DELETE 1
+  id  | first_name | last_name |         email
+------+------------+-----------+-----------------------
+ 1001 | Sally      | Thomas    | sally.thomas@acme.com
+ 1002 | George     | Bailey    | gbailey@foobar.com
+ 1003 | Edward     | Walker    | ed@walker.com
+(3 rows)
+----
+
+NOTE: in case you use a different `id` than `1004`, this may result in a foreign key constraint violation. Either you go with the suggested `1004` or you'd need to delete other records beforehand which reference the specific record and hence violate the key constraint.
+
+When deleting a row from the `inventory.customers` table, the Debezium source connector actually generated two new events. The "main" CDC event reflecting the deletion operation plus an additional so-called "tombstone" event. Switch over to the "watcher" terminal window to verify this:
+
+[.console-output]
+[source,adoc]
+----
+{"id":1004} {"before":{"id":1004,"first_name":"Anne Marie","last_name":"Kretchmar","email":"annek@noanswer.org"},"after":null,"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686729872614,"snapshot":"false","db":"postgres","sequence":"[\"34488608\",\"34488896\"]","schema":"inventory","table":"customers","txId":770,"lsn":34488896,"xmin":null},"op":"d","ts_ms":1686729873091,"transaction":null}
+{"id":1004} null
+----
+
+**CDC event record value: **Since we are dealing with a deletion operation (`"op":"d"`), there is only the `before` field set which contains the table's row values before the deletion happened. The `after` field is `null` in this case, as the data has been removed.
+
+```json
+{
+  "before": {
+    "id": 1004,
+    "first_name": "Anne Marie",
+    "last_name": "Kretchmar",
+    "email": "annek@noanswer.org"
+  },
+  "after": null,
+  "source": {
+    "version": "2.0.1.Final",
+    "connector": "postgresql",
+    "name": "dbserver1",
+    "ts_ms": 1686729872614,
+    "snapshot": "false",
+    "db": "postgres",
+    "sequence": "[\"34488608\",\"34488896\"]",
+    "schema": "inventory",
+    "table": "customers",
+    "txId": 770,
+    "lsn": 34488896,
+    "xmin": null
+  },
+  "op": "d",
+  "ts_ms": 1686729873091,
+  "transaction": null
+}
+```
+
+**Tombstone event: **the value part of the Kafka record is just `null`
+
+```json
+{"id":1004} null
+```
+
+NOTE: While sending an additional tombstone event can be omitted by configuration the default behaviour of Debezium source connectors is to emit them. Tombstones allow Kafka to completely delete all events that refer to the same key of the deleted row in case log compaction is enabled for the corresponding Kafka topic.
+
+== Verify resilience due to Kafka Connect downtime
+
+=== 1. Stop Kafka Connect
+
+Let's "simulate" a Kafka Connect downtime by purposefully shutting down the containerized service.
+
+[tabs]
+====
+Podman::
++
+--
+[.console-input]
+[source,adoc]
+----
+podman stop connect
+----
+[.console-output]
+[source,adoc]
+----
+connect
+----
+--
+Docker::
++
+--
+[.console-input]
+[source,adoc]
+----
+docker stop connect
+----
+[.console-output]
+[source,adoc]
+----
+connect
+----
+--
+==== 
+
+=== 2. Perform databases changes during downtime
+
+During the downtime of Kafka Connect there is obviously also no activity by the Debezium source connector which isn't running at the moment. Switch back to the terminal window running the pg CLI and exectue two `INSERT` statements followed by the `SELECT` query to see the two new rows:
+
+[.console-input]
+[source,adoc]
+----
+INSERT INTO inventory.customers VALUES (default,'Sarah', 'Thompson', 'kitt@acme.com');
+INSERT INTO inventory.customers VALUES (default,'Kenneth', 'Anderson', 'kander@acme.com');
+
+SELECT * FROM inventory.customers;
+----
+[.console-output]
+[source,adoc]
+----
+INSERT 0 1
+INSERT 0 1
+  id  | first_name | last_name |         email
+------+------------+-----------+-----------------------
+ 1001 | Sally      | Thomas    | sally.thomas@acme.com
+ 1002 | George     | Bailey    | gbailey@foobar.com
+ 1003 | Edward     | Walker    | ed@walker.com
+ 1005 | Sarah      | Thompson  | kitt@acme.com
+ 1006 | Kenneth    | Anderson  | kander@acme.com
+(5 rows)
+----
+
+=== 3. Restart Kafka Connect
+
+Let's now restart Kafka Connect with same options there were initially used to run it.
+
+[tabs]
+====
+Podman::
++
+--
+TODO
+--
+Docker::
++
+--
+[.console-input]
+[source,adoc]
+----
+docker run -it --rm --name connect -p 8083:8083 -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses --link zookeeper:zookeeper --link kafka:kafka --link postgres:postgres quay.io/debezium/connect:2.2
+----
+--
+==== 
+
+=== 4. View CDC events in Kafka topic
+
+Switch over to the "watcher" terminal window to see that the kafka topic in question did receive this captured data change events after Kafka Connect and the configured Debezium source connector were up and running again: 
+
+[.console-output]
+[source,adoc]
+----
+{"id":1005} {"before":null,"after":{"id":1005,"first_name":"Sarah","last_name":"Thompson","email":"kitt@acme.com"},"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686732230489,"snapshot":"false","db":"postgres","sequence":"[\"34489480\",\"34489816\"]","schema":"inventory","table":"customers","txId":771,"lsn":34489816,"xmin":null},"op":"c","ts_ms":1686732629473,"transaction":null}
+{"id":1006} {"before":null,"after":{"id":1006,"first_name":"Kenneth","last_name":"Anderson","email":"kander@acme.com"},"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686732230493,"snapshot":"false","db":"postgres","sequence":"[\"34490856\",\"34490856\"]","schema":"inventory","table":"customers","txId":772,"lsn":34490856,"xmin":null},"op":"c","ts_ms":1686732629475,"transaction":null}
+----
+
+== Clean up data infrastructure
+
+Let's remove all data infrastructure components for this demo scenario by stopping all related containers.
+
+[tabs]
+====
+Podman::
++
+--
+[.console-input]
+[source,adoc]
+----
+podman pod rm dbz
+----
+
+--
+Docker::
++
+--
+[.console-input]
+[source,adoc]
+----
+docker stop connect watcher postgres kafka zookeeper
+----
+[.console-output]
+[source,adoc]
+----
+connect
+watcher
+postgres
+kafka
+zookeeper
+----
+--
+==== 
+
+
+🎉 **Congrats on building your first change data capture pipeline with Debezium and Kafka!** 🎊

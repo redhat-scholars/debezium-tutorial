@@ -1,0 +1,106 @@
+= Introduction
+include::_attributes.adoc[]
+
+Debezium (https://debezium.io) is an open-source change data capture (CDC) platform. It can be configured and pointed to a databases such that it first creates an initial snapshot of data that currently resides in the database. After that optional snapshotting phase, the 'real magic' begins and Debezium starts to continuously capture any occurring data changes (i.e. inserts, updates, deletes) by directly reading those from the corresponding transaction log which is underpinning the database itself.
+
+The 'gory details' concerning  database- and transaction log-related implementation specifics are nicely and generically abstracted away such that the whole CDC mechanism happens transparently across the supported database technologies.
+
+Depending on the chosen deployment mode, Debezium can emit / propagate all captured data change events to a number of different messaging infrastructure such as Apache Kafka, Apache Pulsar, Amazon Kinesis, Azure Event Hubs, Google Cloud Pub/Sub, Redis, NATS and several others.
+
+[#cdc-concept]
+== Change Data Capture
+
+There are two fundamentally different approaches to perform change data capture against databases. One option, called query-based CDC, is to have some kind of polling mechanism in place which queries selected database tables for changes at regular intervals. Another option, the one that Debezium follows, is called log-based CDC and works by tailing the transaction log of the respective database.
+
+[cols="1,1,1"]
+|===
+| | query-based CDC | log-based CDC (Debezium)
+
+| all modifications / no changes missed
+| ❌
+| ✅
+
+| low latency & litte overhead
+| ❌
+| ✅
+
+| data model agnostic
+| ❌
+| ✅
+
+| capture deletes
+| ❌
+| ✅
+
+| access previous state and additional meta-data
+| ❌
+| ✅
+
+| incorporate arbitrary tables for "complex queries and/or views"
+| ✅
+| ❌
+
+| simple setup &  easy configuration
+| ✅
+| ❌
+|===
+
+
+
+[#db-support]
+== Supported Databases
+
+Since its inception, the list of relational and non-relational databases that are supported by Debezium is constantly growing. At the time of writing this tutorial, Debezium (version 2.2) provides log-based change-data-capture source connector plugins for the following databases:
+
+[cols="1,1"]
+|===
+| stable | incubating*
+
+| MongoDB
+| Vitess
+
+| MySQL
+| Spanner
+
+| PostgreSQL
+| 
+
+| SQL Server
+|
+
+| Oracle
+|
+
+| Db2
+|
+
+| Cassandra
+|
+
+|===
+
+Recently, **Debezium added its own JDBC sink connector plugin** (incubating*) which provides 'native support' for Debezium's change event payload structure and allows to directly feed data change events into any relational database via JDBC.
+
+_* NOTE: An incubating connector plugin is one that has been released for preview purposes and is subject to changes that may not always be backward compatible._
+
+[#deployment-modes]
+== Deployment Modes
+
+=== _Kafka Connect_
+
+A very common way to use Debezium in production is to deploy its connectors within the context of Apache Kafka and Kafka Connect. Kafka Connect acts as the runtime which instantiates one of Debezium's supported connector plugins based on configuration. All data change events resulting either from an initial snapshot and/or from captured data modifications are produced to Apache Kafka topics. Once the changes events are in topics, they can be accessed by any downstream consumers, for instance, sink connectors which propagate and write the data changes into a target system of choice, such as a search index, a cache layer, a data warehouse etc.
+
+image::dbz-connect-deployment.png["Debezium Deployment Mode with Kafka Connect"]
+
+=== _Debezium Server_
+
+Sometimes, it might be convenient to spin up a standalone application for doing change data capture without the need to additionally setup Apache Kafka and Kafka Connect as separate data infrastructure components. This is where Debezium server comes into the picture. It's a configurable, turn-key ready Java application - written with Quarkus (https://quarkus.io) - that streams CDC events from any of the supported databases to a number of different messaging systems, such as Apache Pulsar, Amazon Kinesis, or Google Cloud Pub/Sub etc.
+
+image::dbz-server-deployment.png["Debezium Server Mode with different messaging infra"]
+
+=== _Debezium Engine_
+
+There are yet other use cases, for which it would be handy to directly embed the Debezium source connector functionality into some custom code, say a Java application. This can be achieved, thanks to the availability of the Debezium Engine. It's essentially a library that needs to be added to a custom application as additional dependency. Once that's done and after configuring the source connector plugin in question, the custom application can start to react to any data change events that are exposed by the Debezium Engine and perform arbitrary operations on the change events stream.
+
+image::dbz-engine-deployment.png["Debezium Server Mode with different messaging infra"]
+

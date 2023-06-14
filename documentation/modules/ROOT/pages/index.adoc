@@ -1,20 +1,26 @@
-= Welcome to Template Tutorial
+= Welcome to the Debezium Tutorial
 :page-layout: home
 :!sectids:
 
 [.text-center.strong]
-== Publish Services to Kubernetes
+== Building Change Data Capture Pipelines
 
-A Kubernetes tutorial to show how you can deploy a Java service to a Kubernetes cluster as it was a child game.
+This tutorial helps you to get started with the open-source change data capture platform Debezium. You will learn about selected features and different ways, how Debezium let's you build streaming data pipelines using popular relational and non-relational databases as data sources. Examples also show, how to stream captured change events to different messaging infrastructure technologies, including but not limited to Apache Kafka.
 
 [.tiles.browse]
 == Browse modules
 
 [.tile]
-.xref:01-setup.adoc[Get Started]
-* xref:01-setup.adoc#minikube[Minikube]
+**1. Getting Started**
+
+.xref:10-introduction.adoc[Overview]
+* xref:10-introduction.adoc#cdc-concept[Change Data Capture]
+* xref:10-introduction.adoc#db-support[Supported Databases]
+* xref:10-introduction.adoc#deployment-modes[Deployment Modes]
 
 [.tile]
-.xref:02-deploy.adoc[Deploying]
-* xref:02-deploy.adoc#package[Package the Application]
-* xref:02-deploy.adoc#deploy[Deploy the Application]
+**2. Elementary**
+
+* xref:20-dbz-kafka-connect.adoc[Apache Kafka Connect]
+* xref:21-dbz-server.adoc[Debezium Server]
+

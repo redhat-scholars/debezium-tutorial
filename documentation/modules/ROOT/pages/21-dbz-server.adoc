@@ -1,0 +1,176 @@
+= Debezium Server
+include::_attributes.adoc[]
+
+Debezium Server ...
+
+== Debezium Server Installation
+
+To install the server download and unpack the server distribution archive: Debezium Server distribution (https://repo1.maven.org/maven2/io/debezium/debezium-server-dist/2.2.1.Final/debezium-server-dist-2.2.1.Final.tar.gz)
+
+A directory named debezium-server will be created with these contents:
+
+```bash
+debezium-server
+├── conf
+├── debezium-server-dist-2.2.1.Final-runner.jar
+├── lib
+├── lib_opt
+├── run.bat
+└── run.sh
+```
+
+== Setup CDC Pipeline with Debezium Server
+
+The following configuration for Debezium Server will create a CDC pipeline between postgreSQL and a mock/test HTTP endpoint provided by https://webhook.site/. Copy your unique webhook.site URL which looks similar to this one `https://webhook.site/6776612c-a8ed-4487-9d90-561bad156357` except that there is a different UUID-based ending for every individual use of their service.
+
+The first step is to provide a configuration file for Debezium Server to specify all necessary settings for the source (where to capture CDC event from) and the sink (where to write captured CDC events to) to be used. Create a file called `application.properties` in the `conf/` sub-folder of the `debezium-server` folder with the following contents:
+
+```properties
+# Quarkus settings
+
+quarkus.log.console.json=false
+
+# Debezium Server settings
+debezium.format.key=json
+debezium.format.value=json
+
+# Debezium Server source settings for postgreSQL
+
+debezium.source.connector.class=io.debezium.connector.postgresql.PostgresConnector
+debezium.source.offset.storage.file.filename=offsets.dat
+#debezium.source.offset.flush.interval.ms=0
+debezium.source.database.hostname=localhost
+debezium.source.database.port=5432
+debezium.source.database.user=postgres
+debezium.source.database.password=postgres
+debezium.source.database.dbname=postgres
+debezium.source.topic.prefix=dbzserver
+debezium.source.schema.include.list=inventory 
+debezium.source.table.include.list=inventory.customers
+debezium.source.slot.name=dbzserver123
+
+# Debezium Server sink settings for an HTTP endpoint/service
+# use your individual http url show in your webhook.site browser tab
+
+debezium.sink.type=http
+debezium.sink.http.url=https://webhook.site/6776612c-a8ed-4487-9d90-561bad156357
+```
+
+From within `debezium-server` folder start the application with either `run.sh` (Mac OS / Linux) or `run.bat` (Windows).
+
+The following is a sample log output for a successful initial snapshot taken by Debezium Server against the `inventory.customers` table in postgreSQL. Several less interesting parts have been removed for brevity's sake:
+
+```
+       __       __                 _
+  ____/ /___   / /_   ___  ____   (_)__  __ ____ ___
+ / __  // _ \ / __ \ / _ \/_  /  / // / / // __ `__ \
+/ /_/ //  __// /_/ //  __/ / /_ / // /_/ // / / / / /
+\__,_/ \___//_.___/ \___/ /___//_/ \__,_//_/ /_/ /_/
+
+
+
+                       Powered by Quarkus 3.0.0.Final
+2023-06-13 16:09:56,761 INFO  [io.deb.ser.BaseChangeConsumer] (main) Using 'io.debezium.server.BaseChangeConsumer$$Lambda$162/0x00000008002757e0@4d8539de' stream name mapper
+2023-06-13 16:09:56,843 INFO  [io.deb.ser.htt.HttpChangeConsumer] (main) Using http content-type type application/json
+2023-06-13 16:09:56,844 INFO  [io.deb.ser.htt.HttpChangeConsumer] (main) Using sink URL: https://webhook.site/6776612c-a8ed-4487-9d90-561bad156357
+2023-06-13 16:09:56,844 INFO  [io.deb.ser.DebeziumServer] (main) Consumer 'io.debezium.server.http.HttpChangeConsumer' instantiated
+
+...
+
+2023-06-13 16:09:56,996 INFO  [io.deb.ser.DebeziumServer] (main) Engine executor started
+2023-06-13 16:09:57,085 INFO  [io.quarkus] (main) debezium-server-dist 2.2.1.Final on JVM (powered by Quarkus 3.0.0.Final) started in 0.904s. Listening on: http://0.0.0.0:8080
+2023-06-13 16:09:57,086 INFO  [io.quarkus] (main) Profile prod activated.
+2023-06-13 16:09:57,086 INFO  [io.quarkus] (main) Installed features: [cdi, resteasy-jackson, smallrye-context-propagation, smallrye-health, vertx]
+2023-06-13 16:09:57,143 INFO  [io.deb.con.pos.PostgresConnector] (pool-6-thread-1) Successfully tested connection for jdbc:postgresql://localhost:5432/postgres with user 'postgres'
+2023-06-13 16:09:57,156 INFO  [io.deb.jdb.JdbcConnection] (pool-7-thread-1) Connection gracefully closed
+2023-06-13 16:09:57,161 INFO  [org.apa.kaf.con.sto.FileOffsetBackingStore] (pool-6-thread-1) Starting FileOffsetBackingStore with file offsets.dat
+
+...
+
+2023-06-13 16:09:57,277 INFO  [io.deb.con.pos.PostgresConnectorTask] (pool-6-thread-1) No previous offset found
+(debezium-postgresconnector-dbzserver-change-event-source-coordinator) Taking initial snapshot for new datasource
+2023-06-13 16:09:57,328 INFO  [io.deb.con.pos.PostgresSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) According to the connector configuration data will be snapshotted
+2023-06-13 16:09:57,328 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot step 1 - Preparing
+2023-06-13 16:09:57,345 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot step 2 - Determining captured tables
+
+...
+
+2023-06-13 16:09:57,370 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Creating snapshot worker pool with 1 worker thread(s)
+2023-06-13 16:09:57,372 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) For table 'inventory.customers' using select statement: 'SELECT "id", "first_name", "last_name", "email" FROM "inventory"."customers"'
+2023-06-13 16:09:57,373 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (pool-9-thread-1) Exporting data from table 'inventory.customers' (1 of 1 tables)
+2023-06-13 16:09:57,391 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (pool-9-thread-1) 	 Finished exporting 5 records for table 'inventory.customers' (1 of 1 tables); total duration '00:00:00.018'
+2023-06-13 16:09:57,393 INFO  [io.deb.pip.sou.AbstractSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot - Final stage
+2023-06-13 16:09:57,393 INFO  [io.deb.pip.sou.AbstractSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot completed
+
+...
+
+2023-06-13 16:09:57,469 INFO  [io.deb.uti.Threads] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Creating thread debezium-postgresconnector-dbzserver-keep-alive
+2023-06-13 16:09:57,475 INFO  [io.deb.con.pos.PostgresSchema] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) REPLICA IDENTITY for 'inventory.customers' is 'FULL'; UPDATE AND DELETE events will contain the previous values of all the columns
+2023-06-13 16:09:57,475 INFO  [io.deb.con.pos.PostgresStreamingChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Searching for WAL resume position
+
+...
+
+
+```
+
+If you look into the webhook.site browser tab you should see all the change events that have been captured and sent to the HTTP sink by Debezium Server during the initial snapshotting phase for the `inventory.customers` table.
+
+If you select the first POST request in the left UI pane and then scroll down the _raw content_ section of the main UI pane you see the essentail **payload field** of this single change event. All the schema-related information has been removed for better readability:
+
+```json
+{
+    "schema": {
+        ...
+    },
+    "payload": {
+        "before": null,
+        "after": {
+            "id": 1001,
+            "first_name": "Sally",
+            "last_name": "Thomas",
+            "email": "sally.thomas@acme.com"
+        },
+        "source": {
+            "version": "2.2.1.Final",
+            "connector": "postgresql",
+            "name": "dbzserver",
+            "ts_ms": 1686665397329,
+            "snapshot": "first",
+            "db": "postgres",
+            "sequence": "[null,\"34492496\"]",
+            "schema": "inventory",
+            "table": "customers",
+            "txId": 777,
+            "lsn": 34492496,
+            "xmin": null
+        },
+        "op": "r",
+        "ts_ms": 1686665397389,
+        "transaction": null
+    }
+}
+```
+
+If you now go and change one record, then delete another record in the `inventory.customers` table, Debezium Server will immediately afterwards capture and process these modifications. This eventually results in two new POST requests in the webhook.site UI that reflect the database table changes respectively.
+
+For instance, run the following two SQL statements against the postgreSQL database schema to verify the expected CDC behaviour.
+
+```sql
+UPDATE inventory.customers SET first_name='Sali' WHERE id=1001;
+DELETE FROM inventory.customers WHERE id=1004;
+```
+
+[tabs]
+====
+Podman::
++
+--
+TODO
+--
+Docker::
++
+--
+blah
+--
+====
+

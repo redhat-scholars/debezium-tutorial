@@ -1,7 +1,9 @@
-* xref:01-setup.adoc[1. Setup]
-** xref:01-setup.adoc#prerequisite[Prerequisites]
-** xref:01-setup.adoc#minikube[Setup Minikube]
+- 1. Getting Started
+* xref:10-introduction.adoc[Overview]
+** xref:10-introduction.adoc#cdc-concept[Change Data Capture]
+** xref:10-introduction.adoc#db-support[Supported Databases]
+** xref:10-introduction.adoc#deployment-modes[Deployment Modes]
 
-* xref:02-deploy.adoc[2. Deploy Service]
-** xref:02-deploy.adoc#package[Build Service]
-** xref:02-deploy.adoc#deploy[Deploy Dervice]
+- 2. Elementary
+* xref:20-dbz-kafka-connect.adoc[Apache Kafka Connect]
+* xref:21-dbz-server.adoc[Debezium Server]
