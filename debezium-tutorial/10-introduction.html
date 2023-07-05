@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Introduction :: Template Tutorial</title>
+    <link rel="canonical" href="https://redhat-scholars.github.io/course-template/debezium-tutorial/10-introduction.html">
+    <link rel="prev" href="index.html">
+    <link rel="next" href="20-dbz-kafka-connect.html">
+    <meta name="generator" content="Antora 3.0.0">
+    <link rel="stylesheet" href="../_/css/site.css">
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://developers.redhat.com" target="_blank"><img src="../_/img/NewRHDFullLogo_4-color_white-wordmark.png" height="40px" alt="Red Hat Developer Program"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="https://redhat-scholars.github.io/course-template">Template Tutorial</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://developers.redhat.com/ebooks/" target="_blank">Books</a>
+        <a class="navbar-item" href="https://developers.redhat.com/cheatsheets/" target="_blank">Cheat Sheets</a>
+        <a class="navbar-item" href="https://developers.redhat.com/events/" target="_blank">Upcoming Events</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">More Tutorials</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/kubernetes-tutorial/" target="_blank">Kubernetes</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/istio-tutorial/" target="_blank">Istio</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/quarkus-tutorial/" target="_blank">Quarkus</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/knative-tutorial/" target="_blank">Knative</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/tekton-tutorial/" target="_blank">Tekton</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="debezium-tutorial" data-version="master">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="index.html"></a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">1. Getting Started</span>
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="2">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="10-introduction.html">Overview</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="3">
+    <a class="nav-link" href="#cdc-concept">Change Data Capture</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a class="nav-link" href="#db-support">Supported Databases</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a class="nav-link" href="#deployment-modes">Deployment Modes</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">2. Elementary</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="20-dbz-kafka-connect.html">Apache Kafka Connect</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="21-dbz-server.html">Debezium Server</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="index.html">Debezium Tutorial</a></li>
+    <li>1. Getting Started</li>
+    <li><a href="10-introduction.html">Overview</a></li>
+  </ul>
+</nav>
+  <div class="edit-this-page"><a href="https://github.com/redhat-scholars/debezium-tutorial/edit/master/documentation/modules/ROOT/pages/10-introduction.adoc">Edit this Page</a></div>
+  </div>
+  <div class="content">
+<article class="doc">
+<h1 class="page">Introduction</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>Debezium (<a href="https://debezium.io" class="bare">https://debezium.io</a>) is an open-source change data capture (CDC) platform. It can be configured and pointed to a databases such that it first creates an initial snapshot of data that currently resides in the database. After that optional snapshotting phase, the 'real magic' begins and Debezium starts to continuously capture any occurring data changes (i.e. inserts, updates, deletes) by directly reading those from the corresponding transaction log which is underpinning the database itself.</p>
+</div>
+<div class="paragraph">
+<p>The 'gory details' concerning  database- and transaction log-related implementation specifics are nicely and generically abstracted away such that the whole CDC mechanism happens transparently across the supported database technologies.</p>
+</div>
+<div class="paragraph">
+<p>Depending on the chosen deployment mode, Debezium can emit / propagate all captured data change events to a number of different messaging infrastructure such as Apache Kafka, Apache Pulsar, Amazon Kinesis, Azure Event Hubs, Google Cloud Pub/Sub, Redis, NATS and several others.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cdc-concept"><a class="anchor" href="#cdc-concept"></a>Change Data Capture</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>There are two fundamentally different approaches to perform change data capture against databases. One option, called query-based CDC, is to have some kind of polling mechanism in place which queries selected database tables for changes at regular intervals. Another option, the one that Debezium follows, is called log-based CDC and works by tailing the transaction log of the respective database.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top"></th>
+<th class="tableblock halign-left valign-top">query-based CDC</th>
+<th class="tableblock halign-left valign-top">log-based CDC (Debezium)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">all modifications / no changes missed</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✅</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">low latency &amp; litte overhead</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✅</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">data model agnostic</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✅</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">capture deletes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✅</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">access previous state and additional meta-data</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✅</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">incorporate arbitrary tables for "complex queries and/or views"</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✅</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">simple setup &amp;  easy configuration</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">✅</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">❌</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="db-support"><a class="anchor" href="#db-support"></a>Supported Databases</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Since its inception, the list of relational and non-relational databases that are supported by Debezium is constantly growing. At the time of writing this tutorial, Debezium (version 2.2) provides log-based change-data-capture source connector plugins for the following databases:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">stable</th>
+<th class="tableblock halign-left valign-top">incubating*</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">MongoDB</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Vitess</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">MySQL</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Spanner</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">PostgreSQL</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SQL Server</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Oracle</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Db2</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cassandra</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>Recently, <strong>Debezium added its own JDBC sink connector plugin</strong> (incubating*) which provides 'native support' for Debezium&#8217;s change event payload structure and allows to directly feed data change events into any relational database via JDBC.</p>
+</div>
+<div class="paragraph">
+<p><em>* NOTE: An incubating connector plugin is one that has been released for preview purposes and is subject to changes that may not always be backward compatible.</em></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="deployment-modes"><a class="anchor" href="#deployment-modes"></a>Deployment Modes</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_kafka_connect"><a class="anchor" href="#_kafka_connect"></a><em>Kafka Connect</em></h3>
+<div class="paragraph">
+<p>A very common way to use Debezium in production is to deploy its connectors within the context of Apache Kafka and Kafka Connect. Kafka Connect acts as the runtime which instantiates one of Debezium&#8217;s supported connector plugins based on configuration. All data change events resulting either from an initial snapshot and/or from captured data modifications are produced to Apache Kafka topics. Once the changes events are in topics, they can be accessed by any downstream consumers, for instance, sink connectors which propagate and write the data changes into a target system of choice, such as a search index, a cache layer, a data warehouse etc.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-connect-deployment.png" alt="Debezium Deployment Mode with Kafka Connect">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_debezium_server"><a class="anchor" href="#_debezium_server"></a><em>Debezium Server</em></h3>
+<div class="paragraph">
+<p>Sometimes, it might be convenient to spin up a standalone application for doing change data capture without the need to additionally setup Apache Kafka and Kafka Connect as separate data infrastructure components. This is where Debezium server comes into the picture. It&#8217;s a configurable, turn-key ready Java application - written with Quarkus (<a href="https://quarkus.io" class="bare">https://quarkus.io</a>) - that streams CDC events from any of the supported databases to a number of different messaging systems, such as Apache Pulsar, Amazon Kinesis, or Google Cloud Pub/Sub etc.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-server-deployment.png" alt="Debezium Server Mode with different messaging infra">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_debezium_engine"><a class="anchor" href="#_debezium_engine"></a><em>Debezium Engine</em></h3>
+<div class="paragraph">
+<p>There are yet other use cases, for which it would be handy to directly embed the Debezium source connector functionality into some custom code, say a Java application. This can be achieved, thanks to the availability of the Debezium Engine. It&#8217;s essentially a library that needs to be added to a custom application as additional dependency. Once that&#8217;s done and after configuring the source connector plugin in question, the custom application can start to react to any data change events that are exposed by the Debezium Engine and perform arbitrary operations on the change events stream.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-engine-deployment.png" alt="Debezium Server Mode with different messaging infra">
+</div>
+</div>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="index.html">Debezium Tutorial</a></span>
+  <span class="next"><a href="20-dbz-kafka-connect.html">Apache Kafka Connect</a></span>
+</nav>
+</article>
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <a class="rhd-logo" href="https://developers.redhat.com" target="_blank"></div>
+</footer>
+<script src="../_/js/vendor/clipboard.js"></script>
+<script src="../_/js/site.js"></script>
+<script async src="../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

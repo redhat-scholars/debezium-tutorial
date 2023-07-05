@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Debezium Server :: Template Tutorial</title>
+    <link rel="canonical" href="https://redhat-scholars.github.io/course-template/debezium-tutorial/21-dbz-server.html">
+    <link rel="prev" href="20-dbz-kafka-connect.html">
+    <meta name="generator" content="Antora 3.0.0">
+    <link rel="stylesheet" href="../_/css/site.css">
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://developers.redhat.com" target="_blank"><img src="../_/img/NewRHDFullLogo_4-color_white-wordmark.png" height="40px" alt="Red Hat Developer Program"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="https://redhat-scholars.github.io/course-template">Template Tutorial</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://developers.redhat.com/ebooks/" target="_blank">Books</a>
+        <a class="navbar-item" href="https://developers.redhat.com/cheatsheets/" target="_blank">Cheat Sheets</a>
+        <a class="navbar-item" href="https://developers.redhat.com/events/" target="_blank">Upcoming Events</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">More Tutorials</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/kubernetes-tutorial/" target="_blank">Kubernetes</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/istio-tutorial/" target="_blank">Istio</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/quarkus-tutorial/" target="_blank">Quarkus</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/knative-tutorial/" target="_blank">Knative</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/tekton-tutorial/" target="_blank">Tekton</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="debezium-tutorial" data-version="master">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="index.html"></a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">1. Getting Started</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="10-introduction.html">Overview</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="3">
+    <a class="nav-link" href="10-introduction.html#cdc-concept">Change Data Capture</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a class="nav-link" href="10-introduction.html#db-support">Supported Databases</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a class="nav-link" href="10-introduction.html#deployment-modes">Deployment Modes</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">2. Elementary</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="20-dbz-kafka-connect.html">Apache Kafka Connect</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="21-dbz-server.html">Debezium Server</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="index.html">Debezium Tutorial</a></li>
+    <li>2. Elementary</li>
+    <li><a href="21-dbz-server.html">Debezium Server</a></li>
+  </ul>
+</nav>
+  <div class="edit-this-page"><a href="https://github.com/redhat-scholars/debezium-tutorial/edit/master/documentation/modules/ROOT/pages/21-dbz-server.adoc">Edit this Page</a></div>
+  </div>
+  <div class="content">
+<article class="doc">
+<h1 class="page">Debezium Server</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>There are use cases for which you might want to make use of CDC and Debezium without introducing Apache Kafka and Kafka Connect to your (existing) architecture. This is where Debezium Server comes into play. It&#8217;s a turn-key ready application which wraps the Debezium Engine library. The application can be configured and provides the same core CDC functionality but supports different types of messaging infrastructure such Apache Pulsar, Amazon Kinesis, or Google Cloud Pub/Sub etc.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-server-deployment.png" alt="Debezium Server Mode with different messaging infra">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_debezium_server_installation"><a class="anchor" href="#_debezium_server_installation"></a>Debezium Server Installation</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>To install Debezium Server download and unpack the <a href="https://repo1.maven.org/maven2/io/debezium/debezium-server-dist/2.2.1.Final/debezium-server-dist-2.2.1.Final.tar.gz">server distribution archive</a>.</p>
+</div>
+<div class="paragraph">
+<p>A directory named debezium-server will be created with these contents:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">debezium-server
+├── conf
+├── debezium-server-dist-2.2.1.Final-runner.jar
+├── lib
+├── lib_opt
+├── run.bat
+└── run.sh</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_run_a_containerized_postgresql_instance"><a class="anchor" href="#_run_a_containerized_postgresql_instance"></a>Run a containerized postgreSQL instance</h2>
+<div class="sectionbody">
+<div class="tabset is-loading">
+<div class="ulist tabs">
+<ul>
+<li>
+<p><a id="tabset1_podman"></a>Podman</p>
+</li>
+<li>
+<p><a id="tabset1_docker"></a>Docker</p>
+</li>
+</ul>
+</div>
+<div class="content">
+<div class="tab-pane" aria-labelledby="tabset1_podman">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2</code></pre>
+</div>
+</div>
+</div>
+<div class="tab-pane" aria-labelledby="tabset1_docker">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_setup_cdc_pipeline_with_debezium_server"><a class="anchor" href="#_setup_cdc_pipeline_with_debezium_server"></a>Setup CDC Pipeline with Debezium Server</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_1_configure_debezium_server"><a class="anchor" href="#_1_configure_debezium_server"></a>1. Configure Debezium Server</h3>
+<div class="paragraph">
+<p>The following configuration for Debezium Server will create a CDC pipeline between a postgreSQL instance and a mock/test HTTP endpoint provided by <a href="https://webhook.site/" class="bare">https://webhook.site/</a>.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This HTTP sink just serves an example target for sending Debezium&#8217;s CDC events to and can be swapped out for other <a href="https://debezium.io/documentation/reference/2.2/operations/debezium-server.html#_sink_configuration">sink systems</a> that Debezium Server currently supports.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Copy your unique <code>webhook.site</code> URL which follows this pattern <code><a href="https://webhook.site/&lt;YOUR_INDIVIDUAL_UUID_HERE&gt" class="bare">https://webhook.site/&lt;YOUR_INDIVIDUAL_UUID_HERE&gt</a>;</code> and ends with an individual UUID. You&#8217;ll need for the configuration file below.</p>
+</div>
+<div class="paragraph">
+<p>The first step is to <strong>provide a configuration file for Debezium Server</strong> to specify all necessary <strong>settings for the postgreSQL source</strong> (i.e. where to capture CDC events from) <strong>and the HTTP sink</strong> (i.e. where to write CDC events to) to be used. Create a file called <code>application.properties</code> in the <code>conf/</code> sub-folder of the <code>debezium-server</code> folder with the following contents and make sure to use your individual <code>webhook.site</code> URL.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-properties hljs" data-lang="properties"># Quarkus settings
+
+quarkus.log.console.json=false
+
+# Debezium Server settings
+debezium.format.key=json
+debezium.format.value=json
+
+# Debezium Server source settings for postgreSQL
+
+debezium.source.connector.class=io.debezium.connector.postgresql.PostgresConnector
+debezium.source.offset.storage.file.filename=offsets.dat
+#debezium.source.offset.flush.interval.ms=0
+debezium.source.database.hostname=localhost
+debezium.source.database.port=5432
+debezium.source.database.user=postgres
+debezium.source.database.password=postgres
+debezium.source.database.dbname=postgres
+debezium.source.topic.prefix=dbzserver
+debezium.source.schema.include.list=inventory
+debezium.source.table.include.list=inventory.customers
+debezium.source.slot.name=dbzserver123
+
+# Debezium Server sink settings for an HTTP endpoint/service
+# use your individual http url show in your webhook.site browser tab
+
+debezium.sink.type=http
+debezium.sink.http.url=https://webhook.site/&lt;YOUR_INDIVIDUAL_UUID_HERE&gt;</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_2_run_debezium_server"><a class="anchor" href="#_2_run_debezium_server"></a>2. Run Debezium Server</h3>
+<div class="paragraph">
+<p>From within <code>debezium-server</code> folder start the application with either <code>./run.sh</code> (Mac OS / Linux) or <code>run.bat</code> (Windows).</p>
+</div>
+<div class="paragraph">
+<p>The following is a sample log output for a successful initial snapshot taken by Debezium Server against the <code>inventory.customers</code> table in postgreSQL. Several "less interesting log" sections have been removed for brevity&#8217;s sake:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">       __       __                 _
+  ____/ /___   / /_   ___  ____   (_)__  __ ____ ___
+ / __  // _ \ / __ \ / _ \/_  /  / // / / // __ `__ \
+/ /_/ //  __// /_/ //  __/ / /_ / // /_/ // / / / / /
+\__,_/ \___//_.___/ \___/ /___//_/ \__,_//_/ /_/ /_/
+
+
+
+                       Powered by Quarkus 3.0.0.Final
+2023-06-13 16:09:56,761 INFO  [io.deb.ser.BaseChangeConsumer] (main) Using 'io.debezium.server.BaseChangeConsumer$$Lambda$162/0x00000008002757e0@4d8539de' stream name mapper
+2023-06-13 16:09:56,843 INFO  [io.deb.ser.htt.HttpChangeConsumer] (main) Using http content-type type application/json
+2023-06-13 16:09:56,844 INFO  [io.deb.ser.htt.HttpChangeConsumer] (main) Using sink URL: https://webhook.site/6776612c-a8ed-4487-9d90-561bad156357
+2023-06-13 16:09:56,844 INFO  [io.deb.ser.DebeziumServer] (main) Consumer 'io.debezium.server.http.HttpChangeConsumer' instantiated
+
+...
+
+2023-06-13 16:09:56,996 INFO  [io.deb.ser.DebeziumServer] (main) Engine executor started
+2023-06-13 16:09:57,085 INFO  [io.quarkus] (main) debezium-server-dist 2.2.1.Final on JVM (powered by Quarkus 3.0.0.Final) started in 0.904s. Listening on: http://0.0.0.0:8080
+2023-06-13 16:09:57,086 INFO  [io.quarkus] (main) Profile prod activated.
+2023-06-13 16:09:57,086 INFO  [io.quarkus] (main) Installed features: [cdi, resteasy-jackson, smallrye-context-propagation, smallrye-health, vertx]
+2023-06-13 16:09:57,143 INFO  [io.deb.con.pos.PostgresConnector] (pool-6-thread-1) Successfully tested connection for jdbc:postgresql://localhost:5432/postgres with user 'postgres'
+2023-06-13 16:09:57,156 INFO  [io.deb.jdb.JdbcConnection] (pool-7-thread-1) Connection gracefully closed
+2023-06-13 16:09:57,161 INFO  [org.apa.kaf.con.sto.FileOffsetBackingStore] (pool-6-thread-1) Starting FileOffsetBackingStore with file offsets.dat
+
+...
+
+2023-06-13 16:09:57,277 INFO  [io.deb.con.pos.PostgresConnectorTask] (pool-6-thread-1) No previous offset found
+(debezium-postgresconnector-dbzserver-change-event-source-coordinator) Taking initial snapshot for new datasource
+2023-06-13 16:09:57,328 INFO  [io.deb.con.pos.PostgresSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) According to the connector configuration data will be snapshotted
+2023-06-13 16:09:57,328 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot step 1 - Preparing
+2023-06-13 16:09:57,345 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot step 2 - Determining captured tables
+
+...
+
+2023-06-13 16:09:57,370 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Creating snapshot worker pool with 1 worker thread(s)
+2023-06-13 16:09:57,372 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) For table 'inventory.customers' using select statement: 'SELECT "id", "first_name", "last_name", "email" FROM "inventory"."customers"'
+2023-06-13 16:09:57,373 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (pool-9-thread-1) Exporting data from table 'inventory.customers' (1 of 1 tables)
+2023-06-13 16:09:57,391 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (pool-9-thread-1) 	 Finished exporting 5 records for table 'inventory.customers' (1 of 1 tables); total duration '00:00:00.018'
+2023-06-13 16:09:57,393 INFO  [io.deb.pip.sou.AbstractSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot - Final stage
+2023-06-13 16:09:57,393 INFO  [io.deb.pip.sou.AbstractSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot completed
+
+...
+
+2023-06-13 16:09:57,469 INFO  [io.deb.uti.Threads] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Creating thread debezium-postgresconnector-dbzserver-keep-alive
+2023-06-13 16:09:57,475 INFO  [io.deb.con.pos.PostgresSchema] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) REPLICA IDENTITY for 'inventory.customers' is 'FULL'; UPDATE AND DELETE events will contain the previous values of all the columns
+2023-06-13 16:09:57,475 INFO  [io.deb.con.pos.PostgresStreamingChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Searching for WAL resume position
+
+...</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_3_check_http_sink_for_cdc_events"><a class="anchor" href="#_3_check_http_sink_for_cdc_events"></a>3. Check HTTP Sink for CDC events</h3>
+<div class="paragraph">
+<p>If you look into your <code>webhook.site</code> browser tab you should see all the change events that have been captured and sent to the HTTP sink by Debezium Server during the initial snapshotting phase for the <code>inventory.customers</code> table. If you select the first / oldest POST request at the very bottom in the left UI pane, and then scroll down the <em>raw content</em> section of the main UI pane, you see the essential <strong>payload field</strong> of this single change event.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/http-sink-cdc-event-sample.png" alt="Debezium Server HTTP Sink CDC event sample">
+</div>
+</div>
+<div class="paragraph">
+<p>All the schema-related information has been removed for better readability in the JSON snippet below.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+    "schema": {
+        ...
+    },
+    "payload": {
+        "before": null,
+        "after": {
+            "id": 1001,
+            "first_name": "Sally",
+            "last_name": "Thomas",
+            "email": "sally.thomas@acme.com"
+        },
+        "source": {
+            "version": "2.2.1.Final",
+            "connector": "postgresql",
+            "name": "dbzserver",
+            "ts_ms": 1688544911359,
+            "snapshot": "first",
+            "db": "postgres",
+            "sequence": "[null,\"33813288\"]",
+            "schema": "inventory",
+            "table": "customers",
+            "txId": 752,
+            "lsn": 33813288,
+            "xmin": null
+        },
+        "op": "r",
+        "ts_ms": 1688544911409,
+        "transaction": null
+    }
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If you now go and change one record and afterwards also delete a different record in the <code>inventory.customers</code> table, Debezium Server will immediately afterwards capture and process these modifications. These modifications eventually result in two new POST requests being sent to our HTTP sink. The <code>webhook.site</code> UI reflects these database table changes respectively.</p>
+</div>
+<div class="paragraph">
+<p>For instance, run the following two SQL statements (<code>UPDATE</code> followed by a <code>DELETE</code>) against the postgreSQL database schema to verify the expected CDC behaviour.</p>
+</div>
+<div class="tabset is-loading">
+<div class="ulist tabs">
+<ul>
+<li>
+<p><a id="tabset2_podman"></a>Podman</p>
+</li>
+<li>
+<p><a id="tabset2_docker"></a>Docker</p>
+</li>
+</ul>
+</div>
+<div class="content">
+<div class="tab-pane" aria-labelledby="tabset2_podman">
+<div class="paragraph">
+<p>First, let&#8217;s exec into the database container&#8217;s shell.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman exec -it postgres bash</code></pre>
+</div>
+</div>
+</div>
+<div class="tab-pane" aria-labelledby="tabset2_docker">
+<div class="paragraph">
+<p>First, let&#8217;s exec into the database container&#8217;s shell.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker exec -it postgres bash</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>Then, within the container&#8217;s bash start the postgreSQL cli and run the queries like so:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">psql -h localhost -p 5432 -U postgres postgres
+
+#now run these two SQL statements in the pg cli
+UPDATE inventory.customers SET first_name='Sali' WHERE id=1001;
+DELETE FROM inventory.customers WHERE id=1004;</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">UPDATE 1
+DELETE 1</code></pre>
+</div>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">#run a select query to see the current state of this table
+SELECT * FROM inventory.customers;</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">  id  | first_name | last_name |         email
+------+------------+-----------+-----------------------
+ 1003 | Edward     | Walker    | ed@walker.com
+ 1002 | Georgio    | Bailey    | gbailey@foobar.com
+ 1001 | Sali       | Thomas    | sally.thomas@acme.com
+(3 rows)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Again, briefly check the <code>webhook.site</code> UI. You should see two new CDC events have been captured and sent by Debezium Server for the <code>UPDATE</code> and <code>DELETE</code> operations respectively.</p>
+</div>
+<div class="paragraph">
+<p><strong>1 new CDC UPDATE event</strong></p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/http-sink-cdc-event-update-payload.png" alt="Debezium Server HTTP Sink CDC event update payload">
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "schema": {
+    ...
+  },
+  "payload": {
+    "before": {
+      "id": 1001,
+      "first_name": "Sally",
+      "last_name": "Thomas",
+      "email": "sally.thomas@acme.com"
+    },
+    "after": {
+      "id": 1001,
+      "first_name": "Sali",
+      "last_name": "Thomas",
+      "email": "sally.thomas@acme.com"
+    },
+    "source": {
+      "version": "2.2.1.Final",
+      "connector": "postgresql",
+      "name": "dbzserver",
+      "ts_ms": 1688350963737,
+      "snapshot": "false",
+      "db": "postgres",
+      "sequence": "[\"34442224\",\"34466112\"]",
+      "schema": "inventory",
+      "table": "customers",
+      "txId": 767,
+      "lsn": 34466112,
+      "xmin": null
+    },
+    "op": "u",
+    "ts_ms": 1688551202591,
+    "transaction": null
+  }
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><strong>1 new CDC DELETE event</strong></p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/http-sink-cdc-event-delete-payload.png" alt="Debezium Server HTTP Sink CDC event delete payload">
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "schema": {
+    ...
+  },
+  "payload": {
+    "before": {
+      "id": 1004,
+      "first_name": "Anne",
+      "last_name": "Kretchmar",
+      "email": "annek@noanswer.org"
+    },
+    "after": null,
+    "source": {
+      "version": "2.2.1.Final",
+      "connector": "postgresql",
+      "name": "dbzserver",
+      "ts_ms": 1688350963772,
+      "snapshot": "false",
+      "db": "postgres",
+      "sequence": "[\"34466672\",\"34466672\"]",
+      "schema": "inventory",
+      "table": "customers",
+      "txId": 768,
+      "lsn": 34466672,
+      "xmin": null
+    },
+    "op": "d",
+    "ts_ms": 1688551202591,
+    "transaction": null
+  }
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_verify_resilience_with_debezium_server"><a class="anchor" href="#_verify_resilience_with_debezium_server"></a>Verify Resilience with Debezium Server</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_1_stop_debezium_server"><a class="anchor" href="#_1_stop_debezium_server"></a>1. Stop Debezium Server</h3>
+<div class="paragraph">
+<p>Switch to the terminal where you started Debezium Server and hit <code>CRTL+C</code> in order to shutdown the application. You should see a log output similar to the one below which informs about the shutdown.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">...
+^C2023-07-05 11:02:27,098 INFO  [io.deb.ser.DebeziumServer] (Shutdown thread) Received request to stop the engine
+2023-07-05 11:02:27,098 INFO  [io.deb.emb.EmbeddedEngine] (Shutdown thread) Stopping the embedded engine
+2023-07-05 11:02:27,099 INFO  [io.deb.emb.EmbeddedEngine] (Shutdown thread) Waiting for PT5M for connector to stop
+2023-07-05 11:02:27,472 INFO  [io.deb.emb.EmbeddedEngine] (pool-6-thread-1) Stopping the task and engine
+2023-07-05 11:02:27,473 INFO  [io.deb.con.com.BaseSourceTask] (pool-6-thread-1) Stopping down connector
+2023-07-05 11:02:27,744 INFO  [io.deb.jdb.JdbcConnection] (pool-12-thread-1) Connection gracefully closed
+2023-07-05 11:02:27,746 INFO  [io.deb.pip.ChangeEventSourceCoordinator] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Finished streaming
+2023-07-05 11:02:27,747 INFO  [io.deb.pip.ChangeEventSourceCoordinator] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Connected metrics set to 'false'
+2023-07-05 11:02:27,749 INFO  [io.deb.jdb.JdbcConnection] (pool-13-thread-1) Connection gracefully closed
+2023-07-05 11:02:27,751 INFO  [org.apa.kaf.con.sto.FileOffsetBackingStore] (pool-6-thread-1) Stopped FileOffsetBackingStore
+2023-07-05 11:02:27,752 INFO  [io.deb.ser.ConnectorLifecycle] (pool-6-thread-1) Connector completed: success = 'true', message = 'Connector 'io.debezium.connector.postgresql.PostgresConnector' completed normally.', error = 'null'
+2023-07-05 11:02:27,768 INFO  [io.quarkus] (Shutdown thread) debezium-server-dist stopped in 0.687s</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If you look into your installation folder of Debezium Server, you&#8217;ll see an additional file called <code>offsets.dat</code> which was specified in the configuration to track and store the offsets:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">.
+├── conf
+├── debezium-server-dist-2.2.1.Final-runner.jar
+├── lib
+├── lib_opt
+├── -&gt; offsets.dat &lt;-
+├── run.bat
+└── run.sh</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Thanks to this offset storage, Debezium Server can determine where to continue with capturing change events after it is being restarted.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_2_make_data_changes_during_downtime"><a class="anchor" href="#_2_make_data_changes_during_downtime"></a>2. Make data changes during downtime</h3>
+<div class="tabset is-loading">
+<div class="ulist tabs">
+<ul>
+<li>
+<p><a id="tabset3_podman"></a>Podman</p>
+</li>
+<li>
+<p><a id="tabset3_docker"></a>Docker</p>
+</li>
+</ul>
+</div>
+<div class="content">
+<div class="tab-pane" aria-labelledby="tabset3_podman">
+<div class="paragraph">
+<p>First, let&#8217;s exec into the database container&#8217;s shell.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman exec -it postgres bash</code></pre>
+</div>
+</div>
+</div>
+<div class="tab-pane" aria-labelledby="tabset3_docker">
+<div class="paragraph">
+<p>First, let&#8217;s exec into the database container&#8217;s shell.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker exec -it postgres bash</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>Then, within the container&#8217;s bash start the postgres cli and run the queries like so:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">psql -h localhost -p 5432 -U postgres postgres
+
+#now run these three SQL statements in the pg cli
+UPDATE inventory.customers SET first_name='Georgio' WHERE id=1002;
+UPDATE inventory.customers SET first_name='Sally' WHERE id=1001;
+INSERT INTO inventory.customers (first_name,last_name,email) VALUES ('John','Doe','john.doe@acme.com');</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">UPDATE 1
+UPDATE 1
+INSERT 0 1</code></pre>
+</div>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">#run a select query to see the current state of this table
+SELECT * FROM inventory.customers;</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">   id  | first_name | last_name |         email
+------+------------+-----------+-----------------------
+ 1003 | Edward     | Walker    | ed@walker.com
+ 1002 | Georgio    | Bailey    | gbailey@foobar.com
+ 1001 | Sally      | Thomas    | sally.thomas@acme.com
+ 1005 | John       | Doe       | john.doe@acme.com
+(4 rows)</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_3_restart_debezium_server"><a class="anchor" href="#_3_restart_debezium_server"></a>3. Restart Debezium Server</h3>
+<div class="paragraph">
+<p>Switch to the terminal where you previously stopped Debezium Server and restart it again with <code>./run.sh</code> (Linux / Mac OS) or <code>run.bat</code> (Windows).</p>
+</div>
+<div class="paragraph">
+<p>Based on the configured <code>offsets.dat</code> file Debezium Server will figure out where to continue streaming change events from and it does so in order to capture the three data changes that have been made during the self-induced "CDC downtime" by stopping Debezium Server.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_4_check_http_sink_for_cdc_events"><a class="anchor" href="#_4_check_http_sink_for_cdc_events"></a>4. Check HTTP Sink for CDC events</h3>
+<div class="paragraph">
+<p>Again, briefly check the <code>webhook.site</code> UI. You should see three new CDC events have been captured and sent by Debezium Server for the two <code>UPDATEs</code> and one <code>INSERT</code> operations respectively.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/http-sink-cdc-events-after-restart.png" alt="Debezium Server HTTP Sink CDC events after restart">
+</div>
+</div>
+<div class="paragraph">
+<p>Similar as shown further above in this chapter, feel free to inspect the CDC payloads for each of the three CDC events in detail in the <code>webhook.site</code> UI in your browser.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_clean_up"><a class="anchor" href="#_clean_up"></a>Clean up</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Let&#8217;s remove the components for this demo scenario.</p>
+</div>
+<div class="sect2">
+<h3 id="_1_stop_debezium_server_2"><a class="anchor" href="#_1_stop_debezium_server_2"></a>1. Stop Debezium Server</h3>
+<div class="paragraph">
+<p>Switching to the terminal where Debezium Server is still running and hit <code>CTRL+C</code> to request a shutdown.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_2_stop_the_postgresql_container"><a class="anchor" href="#_2_stop_the_postgresql_container"></a>2. Stop the postgreSQL container</h3>
+<div class="tabset is-loading">
+<div class="ulist tabs">
+<ul>
+<li>
+<p><a id="tabset4_podman"></a>Podman</p>
+</li>
+<li>
+<p><a id="tabset4_docker"></a>Docker</p>
+</li>
+</ul>
+</div>
+<div class="content">
+<div class="tab-pane" aria-labelledby="tabset4_podman">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman stop postgres</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">postgres</code></pre>
+</div>
+</div>
+</div>
+<div class="tab-pane" aria-labelledby="tabset4_docker">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker stop postgres</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">postgres</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>🎉 <strong>Congrats on building your first change data capture pipeline with Debezium Server!</strong> 🎊</p>
+</div>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="20-dbz-kafka-connect.html">Apache Kafka Connect</a></span>
+</nav>
+</article>
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <a class="rhd-logo" href="https://developers.redhat.com" target="_blank"></div>
+</footer>
+<script src="../_/js/vendor/clipboard.js"></script>
+<script src="../_/js/site.js"></script>
+<script async src="../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
