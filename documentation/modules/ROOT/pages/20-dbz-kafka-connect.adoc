@@ -11,7 +11,6 @@ The following exercise shows and explains how to configure a Debezium Source Con
 
 The example will be based on running all required data infrastructure components as containers locally, either with Podman or Docker. **It's important to note, that all containers are configured as _single ephemeral instances_ which means that all state and data is lost after shutting them down!**
 
-
 == Start required services as containers
 
 Launch the following 4 containers each in its separate terminal window. This will allow to easily inspect their respective logs individually while working through the demo scenario step-by-step.
@@ -574,7 +573,11 @@ Let's now restart Kafka Connect with same options there were initially used to r
 Podman::
 +
 --
-TODO
+[.console-input]
+[source,adoc]
+----
+podman run -it --rm --name connect --pod dbz -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses quay.io/debezium/connect:2.2
+----
 --
 Docker::
 +
@@ -598,7 +601,7 @@ Switch over to the "watcher" terminal window to see that the kafka topic in ques
 {"id":1006} {"before":null,"after":{"id":1006,"first_name":"Kenneth","last_name":"Anderson","email":"kander@acme.com"},"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686732230493,"snapshot":"false","db":"postgres","sequence":"[\"34490856\",\"34490856\"]","schema":"inventory","table":"customers","txId":772,"lsn":34490856,"xmin":null},"op":"c","ts_ms":1686732629475,"transaction":null}
 ----
 
-== Clean up data infrastructure
+== Clean up
 
 Let's remove all data infrastructure components for this demo scenario by stopping all related containers.
 
@@ -610,9 +613,14 @@ Podman::
 [.console-input]
 [source,adoc]
 ----
-podman pod rm dbz
+podman pod rm -f dbz
 ----
-
+[.console-output]
+[source,adoc]
+----
+#YOUR DELETED POD's ID HERE e.g.
+a94642f7b74edb020a7e0a6142e844c94c46d7320a8a69fe5d17c8c9b1c22020
+----
 --
 Docker::
 +

@@ -1,11 +1,13 @@
 = Debezium Server
 include::_attributes.adoc[]
 
-Debezium Server ...
+There are use cases for which you might want to make use of CDC and Debezium without introducing Apache Kafka and Kafka Connect to your (existing) architecture. This is where Debezium Server comes into play. It's a turn-key ready application which wraps the Debezium Engine library. The application can be configured and provides the same core CDC functionality but supports different types of messaging infrastructure such Apache Pulsar, Amazon Kinesis, or Google Cloud Pub/Sub etc.
+
+image::dbz-server-deployment.png["Debezium Server Mode with different messaging infra"]
 
 == Debezium Server Installation
 
-To install the server download and unpack the server distribution archive: Debezium Server distribution (https://repo1.maven.org/maven2/io/debezium/debezium-server-dist/2.2.1.Final/debezium-server-dist-2.2.1.Final.tar.gz)
+To install Debezium Server download and unpack the https://repo1.maven.org/maven2/io/debezium/debezium-server-dist/2.2.1.Final/debezium-server-dist-2.2.1.Final.tar.gz[server distribution archive].
 
 A directory named debezium-server will be created with these contents:
 
@@ -19,11 +21,41 @@ debezium-server
 └── run.sh
 ```
 
+== Run a containerized postgreSQL instance
+
+[tabs]
+====
+Podman::
++
+--
+[.console-input]
+[source,adoc]
+----
+podman run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2
+----
+--
+Docker::
++
+--
+[.console-input]
+[source,adoc]
+----
+docker run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2
+----
+--
+==== 
+
 == Setup CDC Pipeline with Debezium Server
 
-The following configuration for Debezium Server will create a CDC pipeline between postgreSQL and a mock/test HTTP endpoint provided by https://webhook.site/. Copy your unique webhook.site URL which looks similar to this one `https://webhook.site/6776612c-a8ed-4487-9d90-561bad156357` except that there is a different UUID-based ending for every individual use of their service.
+=== 1. Configure Debezium Server
 
-The first step is to provide a configuration file for Debezium Server to specify all necessary settings for the source (where to capture CDC event from) and the sink (where to write captured CDC events to) to be used. Create a file called `application.properties` in the `conf/` sub-folder of the `debezium-server` folder with the following contents:
+The following configuration for Debezium Server will create a CDC pipeline between a postgreSQL instance and a mock/test HTTP endpoint provided by https://webhook.site/.
+
+NOTE: This HTTP sink just serves an example target for sending Debezium's CDC events to and can be swapped out for other https://debezium.io/documentation/reference/2.2/operations/debezium-server.html#_sink_configuration[sink systems] that Debezium Server currently supports.
+
+Copy your unique `webhook.site` URL which follows this pattern `https://webhook.site/<YOUR_INDIVIDUAL_UUID_HERE>` and ends with an individual UUID. You'll need for the configuration file below.
+
+The first step is to **provide a configuration file for Debezium Server** to specify all necessary **settings for the postgreSQL source** (i.e. where to capture CDC events from) **and the HTTP sink** (i.e. where to write CDC events to) to be used. Create a file called `application.properties` in the `conf/` sub-folder of the `debezium-server` folder with the following contents and make sure to use your individual `webhook.site` URL.
 
 ```properties
 # Quarkus settings
@@ -53,12 +85,14 @@ debezium.source.slot.name=dbzserver123
 # use your individual http url show in your webhook.site browser tab
 
 debezium.sink.type=http
-debezium.sink.http.url=https://webhook.site/6776612c-a8ed-4487-9d90-561bad156357
+debezium.sink.http.url=https://webhook.site/<YOUR_INDIVIDUAL_UUID_HERE>
 ```
 
-From within `debezium-server` folder start the application with either `run.sh` (Mac OS / Linux) or `run.bat` (Windows).
+=== 2. Run Debezium Server
 
-The following is a sample log output for a successful initial snapshot taken by Debezium Server against the `inventory.customers` table in postgreSQL. Several less interesting parts have been removed for brevity's sake:
+From within `debezium-server` folder start the application with either `./run.sh` (Mac OS / Linux) or `run.bat` (Windows).
+
+The following is a sample log output for a successful initial snapshot taken by Debezium Server against the `inventory.customers` table in postgreSQL. Several "less interesting log" sections have been removed for brevity's sake:
 
 ```
        __       __                 _
@@ -113,9 +147,13 @@ The following is a sample log output for a successful initial snapshot taken by 
 
 ```
 
-If you look into the webhook.site browser tab you should see all the change events that have been captured and sent to the HTTP sink by Debezium Server during the initial snapshotting phase for the `inventory.customers` table.
+=== 3. Check HTTP Sink for CDC events
 
-If you select the first POST request in the left UI pane and then scroll down the _raw content_ section of the main UI pane you see the essentail **payload field** of this single change event. All the schema-related information has been removed for better readability:
+If you look into your `webhook.site` browser tab you should see all the change events that have been captured and sent to the HTTP sink by Debezium Server during the initial snapshotting phase for the `inventory.customers` table. If you select the first / oldest POST request at the very bottom in the left UI pane, and then scroll down the _raw content_ section of the main UI pane, you see the essential **payload field** of this single change event. 
+
+image::http-sink-cdc-event-sample.png["Debezium Server HTTP Sink CDC event sample"]
+
+All the schema-related information has been removed for better readability in the JSON snippet below.
 
 ```json
 {
@@ -134,43 +172,324 @@ If you select the first POST request in the left UI pane and then scroll down th
             "version": "2.2.1.Final",
             "connector": "postgresql",
             "name": "dbzserver",
-            "ts_ms": 1686665397329,
+            "ts_ms": 1688544911359,
             "snapshot": "first",
             "db": "postgres",
-            "sequence": "[null,\"34492496\"]",
+            "sequence": "[null,\"33813288\"]",
             "schema": "inventory",
             "table": "customers",
-            "txId": 777,
-            "lsn": 34492496,
+            "txId": 752,
+            "lsn": 33813288,
             "xmin": null
         },
         "op": "r",
-        "ts_ms": 1686665397389,
+        "ts_ms": 1688544911409,
         "transaction": null
     }
 }
 ```
 
-If you now go and change one record, then delete another record in the `inventory.customers` table, Debezium Server will immediately afterwards capture and process these modifications. This eventually results in two new POST requests in the webhook.site UI that reflect the database table changes respectively.
+If you now go and change one record and afterwards also delete a different record in the `inventory.customers` table, Debezium Server will immediately afterwards capture and process these modifications. These modifications eventually result in two new POST requests being sent to our HTTP sink. The `webhook.site` UI reflects these database table changes respectively.
 
-For instance, run the following two SQL statements against the postgreSQL database schema to verify the expected CDC behaviour.
-
-```sql
-UPDATE inventory.customers SET first_name='Sali' WHERE id=1001;
-DELETE FROM inventory.customers WHERE id=1004;
-```
+For instance, run the following two SQL statements (`UPDATE` followed by a `DELETE`) against the postgreSQL database schema to verify the expected CDC behaviour. 
 
 [tabs]
 ====
 Podman::
 +
 --
-TODO
+First, let's exec into the database container's shell.
+[.console-input]
+[source,adoc]
+----
+podman exec -it postgres bash
+----
 --
 Docker::
 +
 --
-blah
+First, let's exec into the database container's shell.
+[.console-input]
+[source,adoc]
+----
+docker exec -it postgres bash
+----
 --
 ====
 
+Then, within the container's bash start the postgreSQL cli and run the queries like so:
+
+[.console-input]
+[source,adoc]
+----
+psql -h localhost -p 5432 -U postgres postgres
+
+#now run these two SQL statements in the pg cli
+UPDATE inventory.customers SET first_name='Sali' WHERE id=1001;
+DELETE FROM inventory.customers WHERE id=1004;
+----
+[.console-output]
+[source,adoc]
+----
+UPDATE 1
+DELETE 1
+----
+
+[.console-input]
+[source,adoc]
+----
+#run a select query to see the current state of this table
+SELECT * FROM inventory.customers;
+----
+[.console-output]
+[source,adoc]
+----
+  id  | first_name | last_name |         email
+------+------------+-----------+-----------------------
+ 1003 | Edward     | Walker    | ed@walker.com
+ 1002 | Georgio    | Bailey    | gbailey@foobar.com
+ 1001 | Sali       | Thomas    | sally.thomas@acme.com
+(3 rows)
+----
+
+Again, briefly check the `webhook.site` UI. You should see two new CDC events have been captured and sent by Debezium Server for the `UPDATE` and `DELETE` operations respectively.
+
+**1 new CDC UPDATE event**
+
+image::http-sink-cdc-event-update-payload.png["Debezium Server HTTP Sink CDC event update payload"]
+
+```json
+{
+  "schema": {
+    ...
+  },
+  "payload": {
+    "before": {
+      "id": 1001,
+      "first_name": "Sally",
+      "last_name": "Thomas",
+      "email": "sally.thomas@acme.com"
+    },
+    "after": {
+      "id": 1001,
+      "first_name": "Sali",
+      "last_name": "Thomas",
+      "email": "sally.thomas@acme.com"
+    },
+    "source": {
+      "version": "2.2.1.Final",
+      "connector": "postgresql",
+      "name": "dbzserver",
+      "ts_ms": 1688350963737,
+      "snapshot": "false",
+      "db": "postgres",
+      "sequence": "[\"34442224\",\"34466112\"]",
+      "schema": "inventory",
+      "table": "customers",
+      "txId": 767,
+      "lsn": 34466112,
+      "xmin": null
+    },
+    "op": "u",
+    "ts_ms": 1688551202591,
+    "transaction": null
+  }
+}
+```
+
+**1 new CDC DELETE event**
+
+image::http-sink-cdc-event-delete-payload.png["Debezium Server HTTP Sink CDC event delete payload"]
+
+```json
+{
+  "schema": {
+    ...
+  },
+  "payload": {
+    "before": {
+      "id": 1004,
+      "first_name": "Anne",
+      "last_name": "Kretchmar",
+      "email": "annek@noanswer.org"
+    },
+    "after": null,
+    "source": {
+      "version": "2.2.1.Final",
+      "connector": "postgresql",
+      "name": "dbzserver",
+      "ts_ms": 1688350963772,
+      "snapshot": "false",
+      "db": "postgres",
+      "sequence": "[\"34466672\",\"34466672\"]",
+      "schema": "inventory",
+      "table": "customers",
+      "txId": 768,
+      "lsn": 34466672,
+      "xmin": null
+    },
+    "op": "d",
+    "ts_ms": 1688551202591,
+    "transaction": null
+  }
+}
+```
+
+== Verify Resilience with Debezium Server
+
+=== 1. Stop Debezium Server
+
+Switch to the terminal where you started Debezium Server and hit `CRTL+C` in order to shutdown the application. You should see a log output similar to the one below which informs about the shutdown.
+
+```
+...
+^C2023-07-05 11:02:27,098 INFO  [io.deb.ser.DebeziumServer] (Shutdown thread) Received request to stop the engine
+2023-07-05 11:02:27,098 INFO  [io.deb.emb.EmbeddedEngine] (Shutdown thread) Stopping the embedded engine
+2023-07-05 11:02:27,099 INFO  [io.deb.emb.EmbeddedEngine] (Shutdown thread) Waiting for PT5M for connector to stop
+2023-07-05 11:02:27,472 INFO  [io.deb.emb.EmbeddedEngine] (pool-6-thread-1) Stopping the task and engine
+2023-07-05 11:02:27,473 INFO  [io.deb.con.com.BaseSourceTask] (pool-6-thread-1) Stopping down connector
+2023-07-05 11:02:27,744 INFO  [io.deb.jdb.JdbcConnection] (pool-12-thread-1) Connection gracefully closed
+2023-07-05 11:02:27,746 INFO  [io.deb.pip.ChangeEventSourceCoordinator] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Finished streaming
+2023-07-05 11:02:27,747 INFO  [io.deb.pip.ChangeEventSourceCoordinator] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Connected metrics set to 'false'
+2023-07-05 11:02:27,749 INFO  [io.deb.jdb.JdbcConnection] (pool-13-thread-1) Connection gracefully closed
+2023-07-05 11:02:27,751 INFO  [org.apa.kaf.con.sto.FileOffsetBackingStore] (pool-6-thread-1) Stopped FileOffsetBackingStore
+2023-07-05 11:02:27,752 INFO  [io.deb.ser.ConnectorLifecycle] (pool-6-thread-1) Connector completed: success = 'true', message = 'Connector 'io.debezium.connector.postgresql.PostgresConnector' completed normally.', error = 'null'
+2023-07-05 11:02:27,768 INFO  [io.quarkus] (Shutdown thread) debezium-server-dist stopped in 0.687s
+```
+
+If you look into your installation folder of Debezium Server, you'll see an additional file called `offsets.dat` which was specified in the configuration to track and store the offsets:
+
+```
+.
+├── conf
+├── debezium-server-dist-2.2.1.Final-runner.jar
+├── lib
+├── lib_opt
+├── -> offsets.dat <-
+├── run.bat
+└── run.sh
+```
+
+Thanks to this offset storage, Debezium Server can determine where to continue with capturing change events after it is being restarted.
+
+=== 2. Make data changes during downtime
+
+[tabs]
+====
+Podman::
++
+--
+First, let's exec into the database container's shell.
+[.console-input]
+[source,adoc]
+----
+podman exec -it postgres bash
+----
+--
+Docker::
++
+--
+First, let's exec into the database container's shell.
+[.console-input]
+[source,adoc]
+----
+docker exec -it postgres bash
+----
+--
+====
+
+Then, within the container's bash start the postgres cli and run the queries like so:
+
+[.console-input]
+[source,adoc]
+----
+psql -h localhost -p 5432 -U postgres postgres
+
+#now run these three SQL statements in the pg cli
+UPDATE inventory.customers SET first_name='Georgio' WHERE id=1002;
+UPDATE inventory.customers SET first_name='Sally' WHERE id=1001;
+INSERT INTO inventory.customers (first_name,last_name,email) VALUES ('John','Doe','john.doe@acme.com');
+----
+[.console-output]
+[source,adoc]
+----
+UPDATE 1
+UPDATE 1
+INSERT 0 1
+----
+[.console-input]
+[source,adoc]
+----
+#run a select query to see the current state of this table
+SELECT * FROM inventory.customers;
+----
+[.console-output]
+[source,adoc]
+----
+   id  | first_name | last_name |         email
+------+------------+-----------+-----------------------
+ 1003 | Edward     | Walker    | ed@walker.com
+ 1002 | Georgio    | Bailey    | gbailey@foobar.com
+ 1001 | Sally      | Thomas    | sally.thomas@acme.com
+ 1005 | John       | Doe       | john.doe@acme.com
+(4 rows)
+----
+
+=== 3. Restart Debezium Server
+
+Switch to the terminal where you previously stopped Debezium Server and restart it again with `./run.sh` (Linux / Mac OS) or `run.bat` (Windows).
+
+Based on the configured `offsets.dat` file Debezium Server will figure out where to continue streaming change events from and it does so in order to capture the three data changes that have been made during the self-induced "CDC downtime" by stopping Debezium Server.
+
+=== 4. Check HTTP Sink for CDC events
+
+Again, briefly check the `webhook.site` UI. You should see three new CDC events have been captured and sent by Debezium Server for the two `UPDATEs` and one `INSERT` operations respectively.
+
+image::http-sink-cdc-events-after-restart.png["Debezium Server HTTP Sink CDC events after restart"]
+
+Similar as shown further above in this chapter, feel free to inspect the CDC payloads for each of the three CDC events in detail in the `webhook.site` UI in your browser.
+
+== Clean up
+
+Let's remove the components for this demo scenario.
+
+=== 1. Stop Debezium Server
+
+Switching to the terminal where Debezium Server is still running and hit `CTRL+C` to request a shutdown.
+
+=== 2. Stop the postgreSQL container
+
+[tabs]
+====
+Podman::
++
+--
+[.console-input]
+[source,adoc]
+----
+podman stop postgres
+----
+[.console-output]
+[source,adoc]
+----
+postgres
+----
+--
+Docker::
++
+--
+[.console-input]
+[source,adoc]
+----
+docker stop postgres
+----
+[.console-output]
+[source,adoc]
+----
+postgres
+----
+--
+==== 
+
+
+🎉 **Congrats on building your first change data capture pipeline with Debezium Server!** 🎊
