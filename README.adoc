@@ -1,1 +1,3 @@
-Check the build courseware https://redhat-scholars.github.io/build-course[documentation]  on how folder structure, how to use macros and other gotchas
+# Debezium Tutorial
+
+This is the repository for the Debezium Tutorial available at https://redhat-scholars.github.io/debezium-tutorial/[Debezium Tutorial Guide].
