@@ -3,7 +3,7 @@ runtime:
 
 site:
   title: Debezium Tutorial
-  url: https://redhat-scholars.github.io/course-template
+  url: https://redhat-scholars.github.io/debezium-tutorial
   start_page: debezium-tutorial::index.adoc
 
 content:
