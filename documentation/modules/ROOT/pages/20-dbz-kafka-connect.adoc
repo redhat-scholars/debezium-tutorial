@@ -7,9 +7,9 @@ image::dbz-connect-deployment.png["Debezium Deployment Mode with Kafka Connect"]
 
 The following exercise shows and explains how to configure a Debezium Source Connector for postgreSQL. The resulting CDC pipeline will capture all data change events that are occurring in a postgreSQL database table and propagate these changes into an Apache Kafka topic. The following illustration shows the overview and data flow of the demo scenario.
 
-**TODO: add picture here...**
+image::dbz-tutorial-elementary-kafka-connect-example-basic.png["Debezium with Kafka Connect Demo Scenario"]
 
-The example will be based on running all required data infrastructure components as containers locally, either with Podman or Docker. **It's important to note, that all containers are configured as _single ephemeral instances_ which means that all state and data is lost after shutting them down!**
+For the example all required data infrastructure components are run as containers locally, either with Podman or Docker. **It's important to note, that all containers are configured as _single ephemeral instances_ which means that all state and data is lost after shutting them down!**
 
 == Start required services as containers
 

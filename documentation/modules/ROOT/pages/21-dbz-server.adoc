@@ -5,6 +5,10 @@ There are use cases for which you might want to make use of CDC and Debezium wit
 
 image::dbz-server-deployment.png["Debezium Server Mode with different messaging infra"]
 
+The following exercise shows and explains how to configure a Debezium Server for postgreSQL (source) and an HTTP endpoint (sink). The resulting CDC pipeline will capture all data change events that are occurring in a postgreSQL database table and propagate these changes to the specified HTTP endpoint as POST requests. The following illustration shows the overview and data flow of the demo scenario.
+
+image::dbz-tutorial-elementary-debezium-server-example-basic.png["Debezium Server Demo Scenario"]
+
 == Debezium Server Installation
 
 To install Debezium Server download and unpack the https://repo1.maven.org/maven2/io/debezium/debezium-server-dist/2.2.1.Final/debezium-server-dist-2.2.1.Final.tar.gz[server distribution archive].
@@ -53,7 +57,7 @@ The following configuration for Debezium Server will create a CDC pipeline betwe
 
 NOTE: This HTTP sink just serves an example target for sending Debezium's CDC events to and can be swapped out for other https://debezium.io/documentation/reference/2.2/operations/debezium-server.html#_sink_configuration[sink systems] that Debezium Server currently supports.
 
-Copy your unique `webhook.site` URL which follows this pattern `https://webhook.site/<YOUR_INDIVIDUAL_UUID_HERE>` and ends with an individual UUID. You'll need for the configuration file below.
+Copy your unique `webhook.site` URL which follows this pattern `https://webhook.site/<YOUR_INDIVIDUAL_UUID_HERE>` and ends with an individual UUID. You'll need this URL for the configuration file below.
 
 The first step is to **provide a configuration file for Debezium Server** to specify all necessary **settings for the postgreSQL source** (i.e. where to capture CDC events from) **and the HTTP sink** (i.e. where to write CDC events to) to be used. Create a file called `application.properties` in the `conf/` sub-folder of the `debezium-server` folder with the following contents and make sure to use your individual `webhook.site` URL.
 
@@ -70,7 +74,7 @@ debezium.format.value=json
 
 debezium.source.connector.class=io.debezium.connector.postgresql.PostgresConnector
 debezium.source.offset.storage.file.filename=offsets.dat
-#debezium.source.offset.flush.interval.ms=0
+debezium.source.offset.flush.interval.ms=0
 debezium.source.database.hostname=localhost
 debezium.source.database.port=5432
 debezium.source.database.user=postgres
