@@ -117,6 +117,14 @@
 <img src="_images/dbz-server-deployment.png" alt="Debezium Server Mode with different messaging infra">
 </div>
 </div>
+<div class="paragraph">
+<p>The following exercise shows and explains how to configure a Debezium Server for postgreSQL (source) and an HTTP endpoint (sink). The resulting CDC pipeline will capture all data change events that are occurring in a postgreSQL database table and propagate these changes to the specified HTTP endpoint as POST requests. The following illustration shows the overview and data flow of the demo scenario.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-tutorial-elementary-debezium-server-example-basic.png" alt="Debezium Server Demo Scenario">
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -195,7 +203,7 @@ This HTTP sink just serves an example target for sending Debezium&#8217;s CDC ev
 </table>
 </div>
 <div class="paragraph">
-<p>Copy your unique <code>webhook.site</code> URL which follows this pattern <code><a href="https://webhook.site/&lt;YOUR_INDIVIDUAL_UUID_HERE&gt" class="bare">https://webhook.site/&lt;YOUR_INDIVIDUAL_UUID_HERE&gt</a>;</code> and ends with an individual UUID. You&#8217;ll need for the configuration file below.</p>
+<p>Copy your unique <code>webhook.site</code> URL which follows this pattern <code><a href="https://webhook.site/&lt;YOUR_INDIVIDUAL_UUID_HERE&gt" class="bare">https://webhook.site/&lt;YOUR_INDIVIDUAL_UUID_HERE&gt</a>;</code> and ends with an individual UUID. You&#8217;ll need this URL for the configuration file below.</p>
 </div>
 <div class="paragraph">
 <p>The first step is to <strong>provide a configuration file for Debezium Server</strong> to specify all necessary <strong>settings for the postgreSQL source</strong> (i.e. where to capture CDC events from) <strong>and the HTTP sink</strong> (i.e. where to write CDC events to) to be used. Create a file called <code>application.properties</code> in the <code>conf/</code> sub-folder of the <code>debezium-server</code> folder with the following contents and make sure to use your individual <code>webhook.site</code> URL.</p>
@@ -214,7 +222,7 @@ debezium.format.value=json
 
 debezium.source.connector.class=io.debezium.connector.postgresql.PostgresConnector
 debezium.source.offset.storage.file.filename=offsets.dat
-#debezium.source.offset.flush.interval.ms=0
+debezium.source.offset.flush.interval.ms=0
 debezium.source.database.hostname=localhost
 debezium.source.database.port=5432
 debezium.source.database.user=postgres
