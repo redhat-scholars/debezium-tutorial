@@ -459,7 +459,7 @@ Let's remove the components for this demo scenario.
 
 === 1. Stop Debezium Server
 
-Switching to the terminal where Debezium Server is still running and hit `CTRL+C` to request a shutdown.
+Switch to the terminal where Debezium Server is still running and hit `CTRL+C` to request a shutdown.
 
 === 2. Stop the postgreSQL container
 

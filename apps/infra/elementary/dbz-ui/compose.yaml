@@ -1,0 +1,62 @@
+version: '3'
+services:
+  zookeeper:
+    container_name: zookeeper
+    image: quay.io/debezium/zookeeper:2.2
+    networks:
+      - demo-network
+  kafka:
+    container_name: kafka
+    image: quay.io/debezium/kafka:2.2
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      - ZOOKEEPER_CONNECT=zookeeper:2181
+    networks:
+      - demo-network
+  mysql:
+    container_name: mysql
+    image: quay.io/debezium/example-mysql:2.2
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=debezium
+      - MYSQL_USER=mysqluser
+      - MYSQL_PASSWORD=mysql
+    networks:
+      - demo-network
+  connect:
+    container_name: connect
+    image: quay.io/debezium/connect:2.2
+    ports:
+      - "8083:8083"
+    depends_on:
+      - kafka
+      - mysql
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - GROUP_ID=1
+      - CONFIG_STORAGE_TOPIC=my_connect_configs
+      - OFFSET_STORAGE_TOPIC=my_connect_offsets
+      - STATUS_STORAGE_TOPIC=my_connect_statuses
+      - ENABLE_DEBEZIUM_KC_REST_EXTENSION=true
+      - ENABLE_DEBEZIUM_SCRIPTING=true
+      #- CONNECT_REST_EXTENSION_CLASSES=io.debezium.kcrestextension.DebeziumConnectRestExtension
+    networks:
+      - demo-network
+  debezium-ui:
+    container_name: debezium-ui
+    image: quay.io/debezium/debezium-ui:2.2
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_CONNECT_URIS=http://connect:8083
+    depends_on:
+      - connect
+    networks:
+      - demo-network
+networks:
+  demo-network:
+    name: dbz-ui

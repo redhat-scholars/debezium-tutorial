@@ -7,3 +7,4 @@
 - 2. Elementary
 * xref:20-dbz-kafka-connect.adoc[Apache Kafka Connect]
 * xref:21-dbz-server.adoc[Debezium Server]
+* xref:22-dbz-ui.adoc[Debezium UI]
