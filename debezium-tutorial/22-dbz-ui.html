@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Debezium UI :: Debezium Tutorial</title>
+    <link rel="canonical" href="https://redhat-scholars.github.io/debezium-tutorial/debezium-tutorial/22-dbz-ui.html">
+    <link rel="prev" href="21-dbz-server.html">
+    <meta name="generator" content="Antora 3.0.0">
+    <link rel="stylesheet" href="../_/css/site.css">
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://developers.redhat.com" target="_blank"><img src="../_/img/NewRHDFullLogo_4-color_white-wordmark.png" height="40px" alt="Red Hat Developer Program"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="https://redhat-scholars.github.io/debezium-tutorial">Debezium Tutorial</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://developers.redhat.com/ebooks/" target="_blank">Books</a>
+        <a class="navbar-item" href="https://developers.redhat.com/cheatsheets/" target="_blank">Cheat Sheets</a>
+        <a class="navbar-item" href="https://developers.redhat.com/events/" target="_blank">Upcoming Events</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">More Tutorials</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/kubernetes-tutorial/" target="_blank">Kubernetes</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/istio-tutorial/" target="_blank">Istio</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/quarkus-tutorial/" target="_blank">Quarkus</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/knative-tutorial/" target="_blank">Knative</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/tekton-tutorial/" target="_blank">Tekton</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="debezium-tutorial" data-version="master">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="index.html"></a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">1. Getting Started</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="10-introduction.html">Overview</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="3">
+    <a class="nav-link" href="10-introduction.html#cdc-concept">Change Data Capture</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a class="nav-link" href="10-introduction.html#db-support">Supported Databases</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a class="nav-link" href="10-introduction.html#deployment-modes">Deployment Modes</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">2. Elementary</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="20-dbz-kafka-connect.html">Apache Kafka Connect</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="21-dbz-server.html">Debezium Server</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="22-dbz-ui.html">Debezium UI</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="index.html">Debezium Tutorial</a></li>
+    <li>2. Elementary</li>
+    <li><a href="22-dbz-ui.html">Debezium UI</a></li>
+  </ul>
+</nav>
+  <div class="edit-this-page"><a href="https://github.com/redhat-scholars/debezium-tutorial/edit/master/documentation/modules/ROOT/pages/22-dbz-ui.adoc">Edit this Page</a></div>
+  </div>
+  <div class="content">
+<article class="doc">
+<h1 class="page">Debezium UI</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>Apache Kafka Connect provides a <a href="https://kafka.apache.org/documentation/#connect_rest">REST API</a> to manage (start, pause, stop, configure, &#8230;&#8203;) and inspect (connector plugins, connector instances/tasks, &#8230;&#8203;) connectors. While this very helpful to automate certain activities related to connector management, it might not be the to most convenient way for humans to explore and work with Kafka Connect deployments.</p>
+</div>
+<div class="paragraph">
+<p>In order to address this need, Debezium provides a web-based user interface (<a href="https://debezium.io/documentation/reference/stable/operations/debezium-ui.html">Debezium UI</a>) composed of a frontend (written in React + Patternfly) and a backend (written in <a href="https://quarkus.io">Quarkus</a>), which talks to Kafka Connect&#8217;s REST API behind the scenes. The following exercise shows and explains how to run Debezium UI in order to manage and inspect connector plugins for Apache Kafka Connect.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_start_required_services_as_containers"><a class="anchor" href="#_start_required_services_as_containers"></a>Start required services as containers</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The required infrastructure consists of 5 containers (zookeeper, kafka, connect, mysql, dbzui) which can be launched with either Podman or Docker using the provided <a href="https://compose-spec.io/">compose file</a> in <code>./apps/infra/elementary/dbz-ui/compose.yaml</code> as follows:</p>
+</div>
+<div class="tabset is-loading">
+<div class="ulist tabs">
+<ul>
+<li>
+<p><a id="tabset1_podman"></a>Podman</p>
+</li>
+<li>
+<p><a id="tabset1_docker"></a>Docker</p>
+</li>
+</ul>
+</div>
+<div class="content">
+<div class="tab-pane" aria-labelledby="tabset1_podman">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+Make sure that besides Podman (Desktop) you also have <code>podman-compose</code> installed (instructions <a href="https://podman-desktop.io/docs/compose/podman-compose">here</a>) which is required before you are able to run the command below.
+</td>
+</tr>
+</table>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman-compose -f apps/infra/elementary/dbz-ui/compose.yaml up</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Quickly check if all 5 containers are up and running fine.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman ps</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">CONTAINER ID  IMAGE                               COMMAND     CREATED     STATUS      PORTS                   NAMES
+1ec62b46c48a  quay.io/debezium/zookeeper:2.2      start       6 days ago  Up 6 days                           zookeeper
+a1d433e088df  quay.io/debezium/example-mysql:2.2  mysqld      6 days ago  Up 6 days   0.0.0.0:3306-&gt;3306/tcp  mysql
+3af157e33520  quay.io/debezium/kafka:2.2          start       6 days ago  Up 6 days   0.0.0.0:9092-&gt;9092/tcp  kafka
+18fa09d1b116  quay.io/debezium/connect:2.2        start       6 days ago  Up 6 days   0.0.0.0:8083-&gt;8083/tcp  connect
+a59d2286e7d1  quay.io/debezium/debezium-ui:2.2                6 days ago  Up 6 days   0.0.0.0:8080-&gt;8080/tcp  debezium-ui</code></pre>
+</div>
+</div>
+</div>
+<div class="tab-pane" aria-labelledby="tabset1_docker">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker compose -f apps/infra/elementary/dbz-ui/compose.yaml up</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Quickly check if all 5 containers are up and running fine.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker ps</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">CONTAINER ID   IMAGE                                COMMAND                  CREATED         STATUS                  PORTS                               NAMES
+45e4b8b1cd3a   quay.io/debezium/debezium-ui:2.2     "/deployments/run-ja…"   2 seconds ago   Up Less than a second   0.0.0.0:8080-&gt;8080/tcp              debezium-ui
+4ff3b282bd2b   quay.io/debezium/connect:2.2         "/docker-entrypoint.…"   3 seconds ago   Up 1 second             0.0.0.0:8083-&gt;8083/tcp, 9092/tcp    connect
+8150278a7fde   quay.io/debezium/kafka:2.2           "/docker-entrypoint.…"   3 seconds ago   Up 1 second             0.0.0.0:9092-&gt;9092/tcp              kafka
+c50d16e368c5   quay.io/debezium/example-mysql:2.2   "docker-entrypoint.s…"   3 seconds ago   Up 1 second             0.0.0.0:3306-&gt;3306/tcp, 33060/tcp   mysql
+e2a09a877e16   quay.io/debezium/zookeeper:2.2       "/docker-entrypoint.…"   3 seconds ago   Up 1 second             2181/tcp, 2888/tcp, 3888/tcp        zookeeper</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_run_debezium_source_connector"><a class="anchor" href="#_run_debezium_source_connector"></a>Run Debezium Source Connector</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_open_debezium_ui"><a class="anchor" href="#_open_debezium_ui"></a>Open Debezium UI</h3>
+<div class="paragraph">
+<p>Provided that all containers are up and running fine, go to your favorite web-browser and open <code><a href="http://localhost:8080" class="bare">http://localhost:8080</a></code>. This should bring up the currently empty dashboard of Debezium UI:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-ui-dashboard-empty.png" alt="Empty Dashboard Debezium UI">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_create_mysql_source_connector"><a class="anchor" href="#_create_mysql_source_connector"></a>Create MySQL Source Connector</h3>
+<div class="paragraph">
+<p>Click the "Create a connector" button which brings up the form-based wizard for creating new connector instances. Make sure that to click and select the "MySQL Database" tile from the available database options and click "Next" at the bottom of the page.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-ui-create-connector-wizard-type-marked.png" alt="Debezium UI Connector Wizard - Type">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_define_basic_connector_properties"><a class="anchor" href="#_define_basic_connector_properties"></a>Define Basic Connector Properties</h3>
+<div class="paragraph">
+<p>The next screen of the wizard asks you to specify the major settings for the MySQL source connector. Enter the following values into the respective form fields:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-ui-create-connector-wizard-basic-props.png" alt="Debezium UI Connector Wizard - Basic Properties">
+</div>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Connector name:</strong> <code>my-dbz-mysql-src</code></p>
+</li>
+<li>
+<p><strong>Topic prefix:</strong> <code>mydb1</code></p>
+</li>
+<li>
+<p><strong>Cluster ID:</strong> <code>12345</code></p>
+</li>
+<li>
+<p><strong>Hostname:</strong> <code>mysql</code></p>
+</li>
+<li>
+<p><strong>User:</strong> <code>debezium</code></p>
+</li>
+<li>
+<p><strong>Password:</strong> <code>dbz</code></p>
+</li>
+<li>
+<p><strong>Kafka broker addresses:</strong> <code>kafka:9092</code></p>
+</li>
+<li>
+<p><strong>Database schema history topic name:</strong> <code>dbhistory.inventory</code></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Scroll to the bottom and hit the "Validate" button to verify the specified settings.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-ui-create-connector-wizard-validated.png" alt="Debezium UI Connector Wizard - Basic Properties Validation">
+</div>
+</div>
+<div class="paragraph">
+<p>Afterwards, click the "Next" button to bring up the wizard screen for entering "Additional properties".</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_define_additional_connector_properties"><a class="anchor" href="#_define_additional_connector_properties"></a>Define Additional Connector Properties</h3>
+<div class="paragraph">
+<p>Enter the following values into the respective form fields:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-ui-create-connector-wizard-additional-props-filters-marked.png" alt="Debezium UI Connector Wizard - Additional Properties - Filter Definitions">
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+Only after entering values for database and/or table filter do the "include/exclude" buttons become enabled. By default, when entering a filter it is set to be of type <em>include</em>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Database filter:</strong> <code>inventory</code></p>
+</li>
+<li>
+<p><strong>Table filter:</strong> <code>inventory.customers,inventory.addresses</code></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>These settings will instruct the Debezium MySQL source connector to only snapshot and capture change events for the two table <code>customers</code> and <code>addresses</code> in the <code>inventory</code> database. This means any other databases and tables in the MySQL server instance will be skipped/ignored by Debezium.</p>
+</div>
+<div class="paragraph">
+<p>Since there are no more additional settings needed for this example it is safe to <strong>skip other wizard dialogs by clicking "Review and finish"</strong> which brings up the final review for all the configured settings:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-ui-create-connector-wizard-review-finish.png" alt="Debezium UI Connector Wizard - Review / Finish">
+</div>
+</div>
+<div class="paragraph">
+<p><strong>Confirm by clicking the "Finish" button.</strong></p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_verify_mysql_connector_in_dashboard"><a class="anchor" href="#_verify_mysql_connector_in_dashboard"></a>Verify MySQL Connector in Dashboard</h3>
+<div class="paragraph">
+<p>After a few moments, the dashboard should show the successfully running MySQL source connector instance <code>my-dbz-mysql-src</code> like so:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-ui-dashboard-running-connector.png" alt="Debezium UI - Dashboard with running MySQL Connector">
+</div>
+</div>
+<div class="paragraph">
+<p><strong>A click on the "&gt;" sign</strong> of the connector expands the table row entry and shows a few more runtime details of the connector instance:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-ui-dashboard-running-connector-expanded.png" alt="Debezium UI - Dashboard with running MySQL Connector Expanded View">
+</div>
+</div>
+<div class="paragraph">
+<p><strong>By clicking on the connector name</strong> in the table row entry it&#8217;s possible to inspect the connector configuration details either by means of a tabular or a JSON view:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-ui-dashboard-running-connector-name-click.png" alt="Debezium UI - Dashboard with running MySQL Connector Config">
+</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-ui-dashboard-running-connector-details-table-view.png" alt="Debezium UI - Dashboard with running MySQL Connector Config Table View">
+</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/dbz-ui-dashboard-running-connector-details-json-view.png" alt="Debezium UI - Dashboard with running MySQL Connector Config JSON View">
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_inspect_cdc_records_in_kafka_topics"><a class="anchor" href="#_inspect_cdc_records_in_kafka_topics"></a>Inspect CDC records in Kafka topics</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Now that the connector has been successfully started and is running fine in the background, it is time to inspect snapshot and change data capture events in the corresponding Apache Kafka topics.</p>
+</div>
+<div class="sect2">
+<h3 id="_consume_cdc_events_for_customers"><a class="anchor" href="#_consume_cdc_events_for_customers"></a>Consume CDC events for Customers</h3>
+<div class="tabset is-loading">
+<div class="ulist tabs">
+<ul>
+<li>
+<p><a id="tabset2_podman"></a>Podman</p>
+</li>
+<li>
+<p><a id="tabset2_docker"></a>Docker</p>
+</li>
+</ul>
+</div>
+<div class="content">
+<div class="tab-pane" aria-labelledby="tabset2_podman">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman exec -it kafka bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic mydb1.inventory.customers --from-beginning</code></pre>
+</div>
+</div>
+</div>
+<div class="tab-pane" aria-labelledby="tabset2_docker">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker exec -it kafka bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic mydb1.inventory.customers --from-beginning</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>The Podman/Docker command from above should print all snapshot and change events which Debezium captured for the MySQL database table <code>inventory.customers</code>. Below is one such exemplary Kafka record for the customer record having <code>id=1004</code>.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+The schema information in the payload has been removed from the JSON document for reasons of brevity.
+</td>
+</tr>
+</table>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "schema": {
+    ...
+  },
+  "payload": {
+    "before": null,
+    "after": {
+      "id": 1004,
+      "first_name": "Anne",
+      "last_name": "Kretchmar",
+      "email": "annek@noanswer.org"
+    },
+    "source": {
+      "version": "2.2.0.Final",
+      "connector": "mysql",
+      "name": "mydb1",
+      "ts_ms": 1690555772000,
+      "snapshot": "last_in_data_collection",
+      "db": "inventory",
+      "sequence": null,
+      "table": "customers",
+      "server_id": 0,
+      "gtid": null,
+      "file": "mysql-bin.000003",
+      "pos": 157,
+      "row": 0,
+      "thread": null,
+      "query": null
+    },
+    "op": "r",
+    "ts_ms": 1690555772308,
+    "transaction": null
+  }
+}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_consume_cdc_events_for_addresses"><a class="anchor" href="#_consume_cdc_events_for_addresses"></a>Consume CDC events for Addresses</h3>
+<div class="tabset is-loading">
+<div class="ulist tabs">
+<ul>
+<li>
+<p><a id="tabset3_podman"></a>Podman</p>
+</li>
+<li>
+<p><a id="tabset3_docker"></a>Docker</p>
+</li>
+</ul>
+</div>
+<div class="content">
+<div class="tab-pane" aria-labelledby="tabset3_podman">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman exec -it kafka bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic mydb1.inventory.addresses --from-beginning</code></pre>
+</div>
+</div>
+</div>
+<div class="tab-pane" aria-labelledby="tabset3_docker">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker exec -it kafka bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic mydb1.inventory.addresses --from-beginning</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>The Podman/Docker command from above should print all snapshot and change events which Debezium captured for the MySQL database table <code>inventory.addresses</code>. Below is one such exemplary Kafka record for the address record having <code>id=16</code>.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+The schema information in the payload has been removed from the JSON document for reasons of brevity.
+</td>
+</tr>
+</table>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "schema": {
+      ...
+  },
+  "payload": {
+    "before": null,
+    "after": {
+      "id": 16,
+      "customer_id": 1004,
+      "street": "1289 University Hill Road",
+      "city": "Canehill",
+      "state": "Arkansas",
+      "zip": "72717",
+      "type": "LIVING"
+    },
+    "source": {
+      "version": "2.2.0.Final",
+      "connector": "mysql",
+      "name": "mydb1",
+      "ts_ms": 1690555772000,
+      "snapshot": "last",
+      "db": "inventory",
+      "sequence": null,
+      "table": "addresses",
+      "server_id": 0,
+      "gtid": null,
+      "file": "mysql-bin.000003",
+      "pos": 157,
+      "row": 0,
+      "thread": null,
+      "query": null
+    },
+    "op": "r",
+    "ts_ms": 1690555772330,
+    "transaction": null
+  }
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_clean_up"><a class="anchor" href="#_clean_up"></a>Clean up</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Let&#8217;s remove all data infrastructure components for this demo scenario by stopping all related containers.</p>
+</div>
+<div class="tabset is-loading">
+<div class="ulist tabs">
+<ul>
+<li>
+<p><a id="tabset4_podman"></a>Podman</p>
+</li>
+<li>
+<p><a id="tabset4_docker"></a>Docker</p>
+</li>
+</ul>
+</div>
+<div class="content">
+<div class="tab-pane" aria-labelledby="tabset4_podman">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+Make sure that besides Podman (Desktop) you also have <code>podman-compose</code> installed (instructions <a href="https://podman-desktop.io/docs/compose/podman-compose">here</a>) which is required before you are able to run the command below.
+</td>
+</tr>
+</table>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman-compose -f apps/infra/elementary/dbz-ui/compose.yaml down</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman-compose version: 1.0.6
+['podman', '--version', '']
+using podman version: 4.5.1
+** excluding:  set()
+podman stop -t 10 debezium-ui
+debezium-ui
+exit code: 0
+podman stop -t 10 connect
+connect
+exit code: 0
+podman stop -t 10 kafka
+kafka
+exit code: 0
+podman stop -t 10 mysql
+mysql
+exit code: 0
+podman stop -t 10 zookeeper
+zookeeper
+exit code: 0
+podman rm debezium-ui
+debezium-ui
+exit code: 0
+podman rm connect
+connect
+exit code: 0
+podman rm kafka
+kafka
+exit code: 0
+podman rm mysql
+mysql
+exit code: 0
+podman rm zookeeper
+zookeeper
+exit code: 0</code></pre>
+</div>
+</div>
+</div>
+<div class="tab-pane" aria-labelledby="tabset4_docker">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker compose -f apps/infra/elementary/dbz-ui/compose.yaml down</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">[+] Running 6/6
+ ✔ Container debezium-ui  Removed   0.2s
+ ✔ Container connect      Removed   0.6s
+ ✔ Container mysql        Removed   1.0s
+ ✔ Container kafka        Removed   1.1s
+ ✔ Container zookeeper    Removed   0.5s
+ ✔ Network dbz-ui         Removed</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>🎉 <strong>Congrats on configuring and running your first Debezium source connector with Debezium UI!</strong> 🎊</p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="21-dbz-server.html">Debezium Server</a></span>
+</nav>
+</article>
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <a class="rhd-logo" href="https://developers.redhat.com" target="_blank"></div>
+</footer>
+<script src="../_/js/vendor/clipboard.js"></script>
+<script src="../_/js/site.js"></script>
+<script async src="../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
