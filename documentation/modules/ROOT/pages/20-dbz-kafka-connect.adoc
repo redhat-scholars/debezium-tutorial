@@ -35,7 +35,7 @@ Then run the Zookeeper container in this pod as follows
 [.console-input]
 [source,adoc]
 ----
-podman run -it --rm --name zookeeper --pod dbz quay.io/debezium/zookeeper:2.2
+podman run -it --rm --name zookeeper --pod dbz quay.io/debezium/zookeeper:2.2.0.Final
 ----
 --
 Docker::
@@ -44,7 +44,7 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker run -it --rm --name zookeeper -p 2181:2181 -p 2888:2888 -p 3888:3888 quay.io/debezium/zookeeper:2.2
+docker run -it --rm --name zookeeper -p 2181:2181 -p 2888:2888 -p 3888:3888 quay.io/debezium/zookeeper:2.2.0.Final
 ----
 --
 ==== 
@@ -59,7 +59,7 @@ Podman::
 [.console-input]
 [source,adoc]
 ----
-podman run -it --rm --name kafka --pod dbz quay.io/debezium/kafka:2.2
+podman run -it --rm --name kafka --pod dbz quay.io/debezium/kafka:2.2.0.Final
 ----
 --
 Docker::
@@ -68,7 +68,7 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker run -it --rm --name kafka -p 9092:9092 --link zookeeper:zookeeper quay.io/debezium/kafka:2.2
+docker run -it --rm --name kafka -p 9092:9092 --link zookeeper:zookeeper quay.io/debezium/kafka:2.2.0.Final
 ----
 --
 ==== 
@@ -83,7 +83,7 @@ Podman::
 [.console-input]
 [source,adoc]
 ----
-podman run -it --rm --name postgres --pod dbz -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2
+podman run -it --rm --name postgres --pod dbz -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2.0.Final
 ----
 --
 Docker::
@@ -92,7 +92,7 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2
+docker run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2.0.Final
 ----
 --
 ==== 
@@ -107,7 +107,7 @@ Podman::
 [.console-input]
 [source,adoc]
 ----
-podman run -it --rm --name connect --pod dbz -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses quay.io/debezium/connect:2.2
+podman run -it --rm --name connect --pod dbz -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses quay.io/debezium/connect:2.2.0.Final
 ----
 --
 Docker::
@@ -116,7 +116,7 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker run -it --rm --name connect -p 8083:8083 -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses --link kafka:kafka --link postgres:postgres quay.io/debezium/connect:2.2
+docker run -it --rm --name connect -p 8083:8083 -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses --link kafka:kafka --link postgres:postgres quay.io/debezium/connect:2.2.0.Final
 ----
 --
 ==== 
@@ -295,7 +295,7 @@ Podman::
 [.console-input]
 [source,adoc]
 ----
-podman run -it --rm --name watcher --pod dbz quay.io/debezium/kafka:2.2 watch-topic -a -k dbserver1.inventory.customers
+podman run -it --rm --name watcher --pod dbz quay.io/debezium/kafka:2.2.0.Final watch-topic -a -k dbserver1.inventory.customers
 ----
 --
 Docker::
@@ -304,7 +304,7 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker run -it --rm --name watcher --link zookeeper:zookeeper --link kafka:kafka quay.io/debezium/kafka:2.2 watch-topic -a -k dbserver1.inventory.customers
+docker run -it --rm --name watcher --link zookeeper:zookeeper --link kafka:kafka quay.io/debezium/kafka:2.2.0.Final watch-topic -a -k dbserver1.inventory.customers
 ----
 [.console-output]
 [source,adoc]
@@ -576,7 +576,7 @@ Podman::
 [.console-input]
 [source,adoc]
 ----
-podman run -it --rm --name connect --pod dbz -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses quay.io/debezium/connect:2.2
+podman run -it --rm --name connect --pod dbz -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses quay.io/debezium/connect:2.2.0.Final
 ----
 --
 Docker::
@@ -585,7 +585,7 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker run -it --rm --name connect -p 8083:8083 -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses --link zookeeper:zookeeper --link kafka:kafka --link postgres:postgres quay.io/debezium/connect:2.2
+docker run -it --rm --name connect -p 8083:8083 -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses --link zookeeper:zookeeper --link kafka:kafka --link postgres:postgres quay.io/debezium/connect:2.2.0.Final
 ----
 --
 ==== 

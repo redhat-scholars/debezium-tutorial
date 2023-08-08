@@ -2,12 +2,12 @@ version: '3'
 services:
   zookeeper:
     container_name: zookeeper
-    image: quay.io/debezium/zookeeper:2.2
+    image: quay.io/debezium/zookeeper:2.2.0.Final
     networks:
       - demo-network
   kafka:
     container_name: kafka
-    image: quay.io/debezium/kafka:2.2
+    image: quay.io/debezium/kafka:2.2.0.Final
     ports:
       - "9092:9092"
     depends_on:
@@ -18,7 +18,7 @@ services:
       - demo-network
   mysql:
     container_name: mysql
-    image: quay.io/debezium/example-mysql:2.2
+    image: quay.io/debezium/example-mysql:2.2.0.Final
     ports:
       - "3306:3306"
     environment:
@@ -29,7 +29,7 @@ services:
       - demo-network
   connect:
     container_name: connect
-    image: quay.io/debezium/connect:2.2
+    image: quay.io/debezium/connect:2.2.0.Final
     ports:
       - "8083:8083"
     depends_on:
