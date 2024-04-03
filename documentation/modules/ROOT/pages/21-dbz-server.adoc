@@ -33,7 +33,7 @@ Then run the PostgreSQL container in this pod as follows
 [.console-input]
 [source,adoc]
 ----
-podman run -it --rm --name postgres --pod dbz -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.6
+podman run -it --rm --name postgres --pod dbz -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.6.0.Final
 ----
 --
 Docker::
@@ -42,7 +42,7 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.6
+docker run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.6.0.Final
 ----
 --
 ==== 
@@ -102,7 +102,7 @@ Podman::
 [.console-input]
 [source,adoc]
 ----
-podman run -it --rm --name dbz-server --pod dbz -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data quay.io/debezium/server:2.6
+podman run -it --rm --name dbz-server --pod dbz -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data quay.io/debezium/server:2.6.0.Final
 ----
 --
 Docker::
@@ -111,7 +111,7 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker run -it --rm --name dbz-server -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data -p 8080:8080 --link postgres:postgres quay.io/debezium/server:2.6
+docker run -it --rm --name dbz-server -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data -p 8080:8080 --link postgres:postgres quay.io/debezium/server:2.6.0.Final
 ----
 --
 ====
@@ -512,7 +512,7 @@ Podman::
 [.console-input]
 [source,adoc]
 ----
-podman run -it --rm --name dbz-server --pod dbz -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data quay.io/debezium/server:2.6
+podman run -it --rm --name dbz-server --pod dbz -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data quay.io/debezium/server:2.6.0.Final
 ----
 --
 Docker::
@@ -521,7 +521,7 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker run -it --rm --name dbz-server -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data -p 8080:8080 --link postgres:postgres quay.io/debezium/server:2.6
+docker run -it --rm --name dbz-server -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data -p 8080:8080 --link postgres:postgres quay.io/debezium/server:2.6.0.Final
 ----
 --
 ==== 

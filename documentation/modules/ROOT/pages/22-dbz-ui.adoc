@@ -35,8 +35,8 @@ podman ps
 ----
 CONTAINER ID  IMAGE                                     COMMAND               CREATED         STATUS         PORTS                   NAMES
 c5bcbd907ab7  quay.io/strimzi/kafka:0.40.0-kafka-3.7.0  /bin/sh -c ./bin/...  15 seconds ago  Up 11 seconds  0.0.0.0:9092->9092/tcp  kafka
-85198a7a8c97  quay.io/debezium/example-mysql:2.6        mysqld                14 seconds ago  Up 10 seconds  0.0.0.0:3306->3306/tcp  mysql
-808a633208b7  quay.io/debezium/connect:2.6              start                 12 seconds ago  Up 9 seconds   0.0.0.0:8083->8083/tcp  connect
+85198a7a8c97  quay.io/debezium/example-mysql:2.6.0.Final        mysqld                14 seconds ago  Up 10 seconds  0.0.0.0:3306->3306/tcp  mysql
+808a633208b7  quay.io/debezium/connect:2.6.0.Final              start                 12 seconds ago  Up 9 seconds   0.0.0.0:8083->8083/tcp  connect
 4a401630ea8d  quay.io/debezium/debezium-ui:2.2                                11 seconds ago  Up 8 seconds   0.0.0.0:8080->8080/tcp  debezium-ui
 ----
 
