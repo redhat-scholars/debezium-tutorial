@@ -9,33 +9,31 @@ The following exercise shows and explains how to configure a Debezium Server for
 
 image::dbz-tutorial-elementary-debezium-server-example-basic.png["Debezium Server Demo Scenario"]
 
-== Debezium Server Installation
+For the example all required data infrastructure components are run as containers locally, either with Podman or Docker. **It's important to note, that all containers are configured as _single ephemeral instances_ which means that all state and data is lost after shutting them down!**
 
-To install Debezium Server download and unpack the https://repo1.maven.org/maven2/io/debezium/debezium-server-dist/2.2.1.Final/debezium-server-dist-2.2.1.Final.tar.gz[server distribution archive].
+Launch the following 2 containers each in its separate terminal window. This will allow to easily inspect their respective logs individually while working through the demo scenario step-by-step.
 
-A directory named debezium-server will be created with these contents:
-
-```bash
-debezium-server
-├── conf
-├── debezium-server-dist-2.2.1.Final-runner.jar
-├── lib
-├── lib_opt
-├── run.bat
-└── run.sh
-```
-
-== Run a containerized postgreSQL instance
+== Containerized PostgreSQL
 
 [tabs]
 ====
 Podman::
 +
 --
+First, let's start 1 pod which will host the containers needed for this demo scenario.
+
 [.console-input]
 [source,adoc]
 ----
-podman run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2.0.Final
+podman pod create --name=dbz -p 5432:5432 -p 8080:8080
+----
+
+Then run the PostgreSQL container in this pod as follows
+
+[.console-input]
+[source,adoc]
+----
+podman run -it --rm --name postgres --pod dbz -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.6
 ----
 --
 Docker::
@@ -44,14 +42,14 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2.0.Final
+docker run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.6
 ----
 --
 ==== 
 
-== Setup CDC Pipeline with Debezium Server
+== Containerized Debezium Server
 
-=== 1. Configure Debezium Server
+=== 1. Configuration of CDC Pipeline
 
 The following configuration for Debezium Server will create a CDC pipeline between a postgreSQL instance and a mock/test HTTP endpoint provided by https://webhook.site/.
 
@@ -59,7 +57,9 @@ NOTE: This HTTP sink just serves an example target for sending Debezium's CDC ev
 
 Copy your unique `webhook.site` URL which follows this pattern `https://webhook.site/<YOUR_INDIVIDUAL_UUID_HERE>` and ends with an individual UUID. You'll need this URL for the configuration file below.
 
-The first step is to **provide a configuration file for Debezium Server** to specify all necessary **settings for the postgreSQL source** (i.e. where to capture CDC events from) **and the HTTP sink** (i.e. where to write CDC events to) to be used. Create a file called `application.properties` in the `conf/` sub-folder of the `debezium-server` folder with the following contents and make sure to use your individual `webhook.site` URL.
+The first step is to **provide a configuration file for Debezium Server** to specify all necessary **settings for the postgreSQL source** (i.e. where to capture CDC events from) **and the HTTP sink** (i.e. where to write CDC events to) to be used.
+
+Navigate into to `apps/infra/elementary/dbz-server/config/application.properties` and open the file in an editor of your choice. **Please make sure to use your individual `webhook.site` URL** (see last line in this file):
 
 ```properties
 # Quarkus settings
@@ -73,15 +73,15 @@ debezium.format.value=json
 # Debezium Server source settings for postgreSQL
 
 debezium.source.connector.class=io.debezium.connector.postgresql.PostgresConnector
-debezium.source.offset.storage.file.filename=offsets.dat
+debezium.source.offset.storage.file.filename=/debezium/data/offsets.dat
 debezium.source.offset.flush.interval.ms=0
-debezium.source.database.hostname=localhost
+debezium.source.database.hostname=postgres
 debezium.source.database.port=5432
 debezium.source.database.user=postgres
 debezium.source.database.password=postgres
 debezium.source.database.dbname=postgres
 debezium.source.topic.prefix=dbzserver
-debezium.source.schema.include.list=inventory 
+debezium.source.schema.include.list=inventory
 debezium.source.table.include.list=inventory.customers
 debezium.source.slot.name=dbzserver123
 
@@ -94,9 +94,29 @@ debezium.sink.http.url=https://webhook.site/<YOUR_INDIVIDUAL_UUID_HERE>
 
 === 2. Run Debezium Server
 
-From within `debezium-server` folder start the application with either `./run.sh` (Mac OS / Linux) or `run.bat` (Windows).
+[tabs]
+====
+Podman::
++
+--
+[.console-input]
+[source,adoc]
+----
+podman run -it --rm --name dbz-server --pod dbz -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data quay.io/debezium/server:2.6
+----
+--
+Docker::
++
+--
+[.console-input]
+[source,adoc]
+----
+docker run -it --rm --name dbz-server -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data -p 8080:8080 --link postgres:postgres quay.io/debezium/server:2.6
+----
+--
+====
 
-The following is a sample log output for a successful initial snapshot taken by Debezium Server against the `inventory.customers` table in postgreSQL. Several "less interesting log" sections have been removed for brevity's sake:
+The following is a sample log output for a successful initial snapshot taken by Debezium Server against the `inventory.customers` table in postgreSQL. Several "less interesting" log sections have been removed for brevity's sake:
 
 ```
        __       __                 _
@@ -107,48 +127,60 @@ The following is a sample log output for a successful initial snapshot taken by 
 
 
 
-                       Powered by Quarkus 3.0.0.Final
-2023-06-13 16:09:56,761 INFO  [io.deb.ser.BaseChangeConsumer] (main) Using 'io.debezium.server.BaseChangeConsumer$$Lambda$162/0x00000008002757e0@4d8539de' stream name mapper
-2023-06-13 16:09:56,843 INFO  [io.deb.ser.htt.HttpChangeConsumer] (main) Using http content-type type application/json
-2023-06-13 16:09:56,844 INFO  [io.deb.ser.htt.HttpChangeConsumer] (main) Using sink URL: https://webhook.site/6776612c-a8ed-4487-9d90-561bad156357
-2023-06-13 16:09:56,844 INFO  [io.deb.ser.DebeziumServer] (main) Consumer 'io.debezium.server.http.HttpChangeConsumer' instantiated
+                      Powered by Quarkus 3.2.11.Final
+2024-04-03 11:43:59,574 INFO  [io.deb.ser.BaseChangeConsumer] (main) Using 'io.debezium.server.BaseChangeConsumer$$Lambda$232/0x00000001003c6440@697a34af' stream name mapper
+2024-04-03 11:43:59,604 INFO  [io.deb.ser.htt.HttpChangeConsumer] (main) Using http content-type type application/json
+2024-04-03 11:43:59,604 INFO  [io.deb.ser.htt.HttpChangeConsumer] (main) Using sink URL: https://webhook.site/0e8dbb91-4dd8-458e-bd75-617ccea4003c
+2024-04-03 11:43:59,605 INFO  [io.deb.ser.DebeziumServer] (main) Consumer 'io.debezium.server.http.HttpChangeConsumer' instantiated
 
 ...
 
-2023-06-13 16:09:56,996 INFO  [io.deb.ser.DebeziumServer] (main) Engine executor started
-2023-06-13 16:09:57,085 INFO  [io.quarkus] (main) debezium-server-dist 2.2.1.Final on JVM (powered by Quarkus 3.0.0.Final) started in 0.904s. Listening on: http://0.0.0.0:8080
-2023-06-13 16:09:57,086 INFO  [io.quarkus] (main) Profile prod activated.
-2023-06-13 16:09:57,086 INFO  [io.quarkus] (main) Installed features: [cdi, resteasy-jackson, smallrye-context-propagation, smallrye-health, vertx]
-2023-06-13 16:09:57,143 INFO  [io.deb.con.pos.PostgresConnector] (pool-6-thread-1) Successfully tested connection for jdbc:postgresql://localhost:5432/postgres with user 'postgres'
-2023-06-13 16:09:57,156 INFO  [io.deb.jdb.JdbcConnection] (pool-7-thread-1) Connection gracefully closed
-2023-06-13 16:09:57,161 INFO  [org.apa.kaf.con.sto.FileOffsetBackingStore] (pool-6-thread-1) Starting FileOffsetBackingStore with file offsets.dat
+2024-04-03 11:43:59,700 INFO  [io.deb.ser.DebeziumServer] (main) Engine executor started
+2024-04-03 11:43:59,701 INFO  [io.deb.emb.asy.AsyncEmbeddedEngine] (pool-7-thread-1) Engine state has changed from 'CREATING' to 'INITIALIZING'
+2024-04-03 11:43:59,757 INFO  [io.deb.con.CommonConnectorConfig] (pool-7-thread-1) Loading the custom source info struct maker plugin: io.debezium.connector.postgresql.PostgresSourceInfoStructMaker
+2024-04-03 11:43:59,828 INFO  [io.quarkus] (main) debezium-server-dist 2.6.0.CR1 on JVM (powered by Quarkus 3.2.11.Final) started in 1.548s. Listening on: http://0.0.0.0:8080
+2024-04-03 11:43:59,830 INFO  [io.quarkus] (main) Profile prod activated.
+2024-04-03 11:43:59,831 INFO  [io.quarkus] (main) Installed features: [cdi, kubernetes-client, resteasy-jackson, smallrye-context-propagation, smallrye-health, vertx]
+2024-04-03 11:43:59,885 INFO  [io.deb.con.pos.PostgresConnector] (pool-7-thread-1) Successfully tested connection for jdbc:postgresql://postgres:5432/postgres with user 'postgres'
+2024-04-03 11:43:59,892 INFO  [io.deb.jdb.JdbcConnection] (pool-10-thread-1) Connection gracefully closed
+2024-04-03 11:43:59,899 INFO  [org.apa.kaf.con.jso.JsonConverterConfig] (pool-7-thread-1) JsonConverterConfig values:
+	converter.type = key
+	decimal.format = BASE64
+	replace.null.with.default = true
+	schemas.cache.size = 1000
+	schemas.enable = false
+
+2024-04-03 11:43:59,900 INFO  [org.apa.kaf.con.sto.FileOffsetBackingStore] (pool-7-thread-1) Starting FileOffsetBackingStore with file offsets.dat
 
 ...
 
-2023-06-13 16:09:57,277 INFO  [io.deb.con.pos.PostgresConnectorTask] (pool-6-thread-1) No previous offset found
-(debezium-postgresconnector-dbzserver-change-event-source-coordinator) Taking initial snapshot for new datasource
-2023-06-13 16:09:57,328 INFO  [io.deb.con.pos.PostgresSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) According to the connector configuration data will be snapshotted
-2023-06-13 16:09:57,328 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot step 1 - Preparing
-2023-06-13 16:09:57,345 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot step 2 - Determining captured tables
+2024-04-03 11:44:00,037 INFO  [io.deb.con.pos.con.PostgresConnection] (pool-8-thread-1) Obtained valid replication slot ReplicationSlot [active=false, latestFlushedLsn=null, catalogXmin=null]
+2024-04-03 11:44:00,037 INFO  [io.deb.con.pos.PostgresConnectorTask] (pool-8-thread-1) No previous offset found
+2024-04-03 11:44:00,055 INFO  [io.deb.con.pos.con.PostgresReplicationConnection] (pool-8-thread-1) Creating replication slot with command CREATE_REPLICATION_SLOT "dbzserver123"  LOGICAL decoderbufs
+2024-04-03 11:44:00,072 INFO  [io.deb.uti.Threads] (pool-8-thread-1) Requested thread factory for connector PostgresConnector, id = dbzserver named = SignalProcessor
+2024-04-03 11:44:00,085 INFO  [io.deb.uti.Threads] (pool-8-thread-1) Requested thread factory for connector PostgresConnector, id = dbzserver named = change-event-source-coordinator
+2024-04-03 11:44:00,085 INFO  [io.deb.uti.Threads] (pool-8-thread-1) Requested thread factory for connector PostgresConnector, id = dbzserver named = blocking-snapshot
+2024-04-03 11:44:00,093 INFO  [io.deb.uti.Threads] (pool-8-thread-1) Creating thread debezium-postgresconnector-dbzserver-change-event-source-coordinator
+2024-04-03 11:44:00,094 INFO  [io.deb.emb.asy.AsyncEmbeddedEngine] (pool-7-thread-1) All tasks have stated successfully.
+2024-04-03 11:44:00,094 INFO  [io.deb.emb.asy.AsyncEmbeddedEngine] (pool-7-thread-1) Engine state has changed from 'STARTING_TASKS' to 'POLLING_TASKS'
 
 ...
 
-2023-06-13 16:09:57,370 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Creating snapshot worker pool with 1 worker thread(s)
-2023-06-13 16:09:57,372 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) For table 'inventory.customers' using select statement: 'SELECT "id", "first_name", "last_name", "email" FROM "inventory"."customers"'
-2023-06-13 16:09:57,373 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (pool-9-thread-1) Exporting data from table 'inventory.customers' (1 of 1 tables)
-2023-06-13 16:09:57,391 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (pool-9-thread-1) 	 Finished exporting 5 records for table 'inventory.customers' (1 of 1 tables); total duration '00:00:00.018'
-2023-06-13 16:09:57,393 INFO  [io.deb.pip.sou.AbstractSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot - Final stage
-2023-06-13 16:09:57,393 INFO  [io.deb.pip.sou.AbstractSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot completed
+2024-04-03 11:44:00,180 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Creating snapshot worker pool with 1 worker thread(s)
+2024-04-03 11:44:00,183 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) For table 'inventory.customers' using select statement: 'SELECT "id", "first_name", "last_name", "email" FROM "inventory"."customers"'
+2024-04-03 11:44:00,187 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (pool-12-thread-1) Exporting data from table 'inventory.customers' (1 of 1 tables)
+2024-04-03 11:44:00,201 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (pool-12-thread-1) 	 Finished exporting 4 records for table 'inventory.customers' (1 of 1 tables); total duration '00:00:00.014'
+2024-04-03 11:44:00,203 INFO  [io.deb.pip.sou.AbstractSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot - Final stage
+2024-04-03 11:44:00,203 INFO  [io.deb.pip.sou.AbstractSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot completed
 
 ...
 
-2023-06-13 16:09:57,469 INFO  [io.deb.uti.Threads] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Creating thread debezium-postgresconnector-dbzserver-keep-alive
-2023-06-13 16:09:57,475 INFO  [io.deb.con.pos.PostgresSchema] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) REPLICA IDENTITY for 'inventory.customers' is 'FULL'; UPDATE AND DELETE events will contain the previous values of all the columns
-2023-06-13 16:09:57,475 INFO  [io.deb.con.pos.PostgresStreamingChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Searching for WAL resume position
+2024-04-03 11:44:00,252 INFO  [io.deb.uti.Threads] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Requested thread factory for connector PostgresConnector, id = dbzserver named = keep-alive
+2024-04-03 11:44:00,253 INFO  [io.deb.uti.Threads] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Creating thread debezium-postgresconnector-dbzserver-keep-alive
+2024-04-03 11:44:00,257 INFO  [io.deb.con.pos.PostgresSchema] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) REPLICA IDENTITY for 'inventory.customers' is 'FULL'; UPDATE AND DELETE events will contain the previous values of all the columns
+2024-04-03 11:44:00,258 INFO  [io.deb.con.pos.PostgresStreamingChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Searching for WAL resume position
 
 ...
-
-
 ```
 
 === 3. Check HTTP Sink for CDC events
@@ -165,30 +197,34 @@ All the schema-related information has been removed for better readability in th
         ...
     },
     "payload": {
-        "before": null,
-        "after": {
-            "id": 1001,
-            "first_name": "Sally",
-            "last_name": "Thomas",
-            "email": "sally.thomas@acme.com"
-        },
-        "source": {
-            "version": "2.2.1.Final",
-            "connector": "postgresql",
-            "name": "dbzserver",
-            "ts_ms": 1688544911359,
-            "snapshot": "first",
-            "db": "postgres",
-            "sequence": "[null,\"33813288\"]",
-            "schema": "inventory",
-            "table": "customers",
-            "txId": 752,
-            "lsn": 33813288,
-            "xmin": null
-        },
-        "op": "r",
-        "ts_ms": 1688544911409,
-        "transaction": null
+      "before": null,
+      "after": {
+        "id": 1001,
+        "first_name": "Sally",
+        "last_name": "Thomas",
+        "email": "sally.thomas@acme.com"
+      },
+      "source": {
+        "version": "2.6.0.Final",
+        "connector": "postgresql",
+        "name": "dbzserver",
+        "ts_ms": 1712144640133,
+        "snapshot": "first",
+        "db": "postgres",
+        "sequence": "[null,\"33795376\"]",
+        "ts_us": 1712144640133063,
+        "ts_ns": 1712144640133063000,
+        "schema": "inventory",
+        "table": "customers",
+        "txId": 758,
+        "lsn": 33795376,
+        "xmin": null
+      },
+      "op": "r",
+      "ts_ms": 1712144640198,
+      "ts_us": 1712144640198571,
+      "ts_ns": 1712144640198571000,
+      "transaction": null
     }
 }
 ```
@@ -281,21 +317,25 @@ image::http-sink-cdc-event-update-payload.png["Debezium Server HTTP Sink CDC eve
       "email": "sally.thomas@acme.com"
     },
     "source": {
-      "version": "2.2.1.Final",
+      "version": "2.6.0.Final",
       "connector": "postgresql",
       "name": "dbzserver",
-      "ts_ms": 1688350963737,
+      "ts_ms": 1712145927919,
       "snapshot": "false",
       "db": "postgres",
-      "sequence": "[\"34442224\",\"34466112\"]",
+      "sequence": "[\"34481056\",\"34482296\"]",
+      "ts_us": 1712145927919125,
+      "ts_ns": 1712145927919125000,
       "schema": "inventory",
       "table": "customers",
-      "txId": 767,
-      "lsn": 34466112,
+      "txId": 773,
+      "lsn": 34482296,
       "xmin": null
     },
     "op": "u",
-    "ts_ms": 1688551202591,
+    "ts_ms": 1712145928163,
+    "ts_us": 1712145928163459,
+    "ts_ns": 1712145928163459000,
     "transaction": null
   }
 }
@@ -319,21 +359,25 @@ image::http-sink-cdc-event-delete-payload.png["Debezium Server HTTP Sink CDC eve
     },
     "after": null,
     "source": {
-      "version": "2.2.1.Final",
+      "version": "2.6.0.Final",
       "connector": "postgresql",
       "name": "dbzserver",
-      "ts_ms": 1688350963772,
+      "ts_ms": 1712145927922,
       "snapshot": "false",
       "db": "postgres",
-      "sequence": "[\"34466672\",\"34466672\"]",
+      "sequence": "[\"34482856\",\"34482856\"]",
+      "ts_us": 1712145927922366,
+      "ts_ns": 1712145927922366000,
       "schema": "inventory",
       "table": "customers",
-      "txId": 768,
-      "lsn": 34466672,
+      "txId": 774,
+      "lsn": 34482856,
       "xmin": null
     },
     "op": "d",
-    "ts_ms": 1688551202591,
+    "ts_ms": 1712145928164,
+    "ts_us": 1712145928164772,
+    "ts_ns": 1712145928164772000,
     "transaction": null
   }
 }
@@ -343,38 +387,55 @@ image::http-sink-cdc-event-delete-payload.png["Debezium Server HTTP Sink CDC eve
 
 === 1. Stop Debezium Server
 
-Switch to the terminal where you started Debezium Server and hit `CRTL+C` in order to shutdown the application. You should see a log output similar to the one below which informs about the shutdown.
+[tabs]
+====
+Podman::
++
+--
+[.console-input]
+[source,adoc]
+----
+podman stop dbz-server
+----
+--
+Docker::
++
+--
+[.console-input]
+[source,adoc]
+----
+docker stop dbz-server
+----
+--
+==== 
+
+Switch to the terminal where you originally started Debezium Server. You should see a log output similar to the one below which informs about the shutdown.
 
 ```
 ...
-^C2023-07-05 11:02:27,098 INFO  [io.deb.ser.DebeziumServer] (Shutdown thread) Received request to stop the engine
-2023-07-05 11:02:27,098 INFO  [io.deb.emb.EmbeddedEngine] (Shutdown thread) Stopping the embedded engine
-2023-07-05 11:02:27,099 INFO  [io.deb.emb.EmbeddedEngine] (Shutdown thread) Waiting for PT5M for connector to stop
-2023-07-05 11:02:27,472 INFO  [io.deb.emb.EmbeddedEngine] (pool-6-thread-1) Stopping the task and engine
-2023-07-05 11:02:27,473 INFO  [io.deb.con.com.BaseSourceTask] (pool-6-thread-1) Stopping down connector
-2023-07-05 11:02:27,744 INFO  [io.deb.jdb.JdbcConnection] (pool-12-thread-1) Connection gracefully closed
-2023-07-05 11:02:27,746 INFO  [io.deb.pip.ChangeEventSourceCoordinator] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Finished streaming
-2023-07-05 11:02:27,747 INFO  [io.deb.pip.ChangeEventSourceCoordinator] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Connected metrics set to 'false'
-2023-07-05 11:02:27,749 INFO  [io.deb.jdb.JdbcConnection] (pool-13-thread-1) Connection gracefully closed
-2023-07-05 11:02:27,751 INFO  [org.apa.kaf.con.sto.FileOffsetBackingStore] (pool-6-thread-1) Stopped FileOffsetBackingStore
-2023-07-05 11:02:27,752 INFO  [io.deb.ser.ConnectorLifecycle] (pool-6-thread-1) Connector completed: success = 'true', message = 'Connector 'io.debezium.connector.postgresql.PostgresConnector' completed normally.', error = 'null'
-2023-07-05 11:02:27,768 INFO  [io.quarkus] (Shutdown thread) debezium-server-dist stopped in 0.687s
+2024-04-03 12:17:07,615 INFO  [io.deb.ser.DebeziumServer] (Shutdown thread) Received request to stop the engine
+2024-04-03 12:17:07,616 INFO  [io.deb.emb.asy.AsyncEmbeddedEngine] (Shutdown thread) Engine state has changed from 'POLLING_TASKS' to 'STOPPING'
+2024-04-03 12:17:08,620 INFO  [io.deb.con.com.BaseSourceTask] (pool-8-thread-1) Stopping down connector
+2024-04-03 12:17:09,016 INFO  [io.deb.con.pos.PostgresStreamingChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) WAL resume position 'null' discovered
+2024-04-03 12:17:09,035 INFO  [io.deb.jdb.JdbcConnection] (pool-14-thread-1) Connection gracefully closed
+2024-04-03 12:17:09,054 INFO  [io.deb.uti.Threads] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Requested thread factory for connector PostgresConnector, id = dbzserver named = keep-alive
+2024-04-03 12:17:09,054 INFO  [io.deb.uti.Threads] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Creating thread debezium-postgresconnector-dbzserver-keep-alive
+2024-04-03 12:17:09,054 INFO  [io.deb.con.pos.PostgresStreamingChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Processing messages
+2024-04-03 12:17:09,056 INFO  [io.deb.jdb.JdbcConnection] (pool-15-thread-1) Connection gracefully closed
+2024-04-03 12:17:09,057 INFO  [io.deb.pip.ChangeEventSourceCoordinator] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Finished streaming
+2024-04-03 12:17:09,057 INFO  [io.deb.pip.ChangeEventSourceCoordinator] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Connected metrics set to 'false'
+2024-04-03 12:17:09,059 INFO  [io.deb.pip.sig.SignalProcessor] (pool-8-thread-1) SignalProcessor stopped
+2024-04-03 12:17:09,059 INFO  [io.deb.ser.DefaultServiceRegistry] (pool-8-thread-1) Debezium ServiceRegistry stopped.
+2024-04-03 12:17:09,062 INFO  [io.deb.jdb.JdbcConnection] (pool-16-thread-1) Connection gracefully closed
+2024-04-03 12:17:09,064 INFO  [io.deb.jdb.JdbcConnection] (pool-17-thread-1) Connection gracefully closed
+2024-04-03 12:17:09,066 INFO  [io.deb.emb.asy.AsyncEmbeddedEngine] (Shutdown thread) Stopped task #1 out of 1 tasks (it took 444 ms to stop the task).
+2024-04-03 12:17:09,067 INFO  [io.deb.emb.asy.AsyncEmbeddedEngine] (pool-7-thread-1) Engine is stopped.
+2024-04-03 12:17:09,067 INFO  [io.deb.emb.asy.AsyncEmbeddedEngine] (pool-7-thread-1) Engine state has changed from 'STOPPING' to 'STOPPED'
+2024-04-03 12:17:09,068 INFO  [io.deb.ser.ConnectorLifecycle] (pool-7-thread-1) Connector completed: success = 'true', message = 'Connector 'io.debezium.connector.postgresql.PostgresConnector' completed normally.', error = 'null'
+2024-04-03 12:17:09,096 INFO  [io.quarkus] (Shutdown thread) debezium-server-dist stopped in 1.495s
 ```
 
-If you look into your installation folder of Debezium Server, you'll see an additional file called `offsets.dat` which was specified in the configuration to track and store the offsets:
-
-```
-.
-├── conf
-├── debezium-server-dist-2.2.1.Final-runner.jar
-├── lib
-├── lib_opt
-├── -> offsets.dat <-
-├── run.bat
-└── run.sh
-```
-
-Thanks to this offset storage, Debezium Server can determine where to continue with capturing change events after it is being restarted.
+Go into the main folder where you cloned the Debezium tutorial into, and open the folder `apps/infra/elementary/dbz-server/data` which should now contain a file called `offsets.dat`. This file was specified in the configuration to track and store the offsets. Thanks to this offset storage, Debezium Server can determine where to continue with capturing change events after it has been restarted.
 
 === 2. Make data changes during downtime
 
@@ -441,9 +502,31 @@ SELECT * FROM inventory.customers;
 
 === 3. Restart Debezium Server
 
-Switch to the terminal where you previously stopped Debezium Server and restart it again with `./run.sh` (Linux / Mac OS) or `run.bat` (Windows).
+Use the same command and configuration as for the original Debezium Server container start.
 
-Based on the configured `offsets.dat` file Debezium Server will figure out where to continue streaming change events from and it does so in order to capture the three data changes that have been made during the self-induced "CDC downtime" by stopping Debezium Server.
+[tabs]
+====
+Podman::
++
+--
+[.console-input]
+[source,adoc]
+----
+podman run -it --rm --name dbz-server --pod dbz -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data quay.io/debezium/server:2.6
+----
+--
+Docker::
++
+--
+[.console-input]
+[source,adoc]
+----
+docker run -it --rm --name dbz-server -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data -p 8080:8080 --link postgres:postgres quay.io/debezium/server:2.6
+----
+--
+==== 
+
+Based on the configured `offsets.dat` file Debezium Server will figure out where to continue streaming change events from and it does so in order to capture the three data changes that have been made during the self-induced "CDC downtime" due to stopping Debezium Server.
 
 === 4. Check HTTP Sink for CDC events
 
@@ -455,13 +538,7 @@ Similar as shown further above in this chapter, feel free to inspect the CDC pay
 
 == Clean up
 
-Let's remove the components for this demo scenario.
-
-=== 1. Stop Debezium Server
-
-Switch to the terminal where Debezium Server is still running and hit `CTRL+C` to request a shutdown.
-
-=== 2. Stop the postgreSQL container
+Let’s remove all data infrastructure components for this demo scenario by stopping all related containers.
 
 [tabs]
 ====
@@ -471,12 +548,13 @@ Podman::
 [.console-input]
 [source,adoc]
 ----
-podman stop postgres
+podman pod rm -f dbz
 ----
 [.console-output]
 [source,adoc]
 ----
-postgres
+#YOUR DELETED POD's ID HERE e.g.
+dddce3b213c4aa9726ed6d78a6126d2f5722402c6ebbe8483dbcb369988a88f5
 ----
 --
 Docker::
@@ -485,15 +563,15 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker stop postgres
+docker stop postgres dbz-server
 ----
 [.console-output]
 [source,adoc]
 ----
 postgres
+dbz-server
 ----
 --
-==== 
-
+====
 
 🎉 **Congrats on building your first change data capture pipeline with Debezium Server!** 🎊
