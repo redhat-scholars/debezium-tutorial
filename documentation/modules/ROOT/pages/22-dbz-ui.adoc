@@ -19,10 +19,10 @@ NOTE: Make sure that besides Podman (Desktop) you also have `podman-compose` ins
 [.console-input]
 [source,adoc]
 ----
-podman-compose -f apps/infra/elementary/dbz-ui/compose.yaml up
+podman compose -f apps/infra/elementary/dbz-ui/compose.yaml up
 ----
 
-Quickly check if all 5 containers are up and running fine.
+Quickly check if all 4 containers are up and running fine.
 
 [.console-input]
 [source,adoc]
@@ -33,12 +33,11 @@ podman ps
 [.console-output]
 [source,adoc]
 ----
-CONTAINER ID  IMAGE                               COMMAND     CREATED     STATUS      PORTS                   NAMES
-1ec62b46c48a  quay.io/debezium/zookeeper:2.2      start       6 days ago  Up 6 days                           zookeeper
-a1d433e088df  quay.io/debezium/example-mysql:2.2  mysqld      6 days ago  Up 6 days   0.0.0.0:3306->3306/tcp  mysql
-3af157e33520  quay.io/debezium/kafka:2.2          start       6 days ago  Up 6 days   0.0.0.0:9092->9092/tcp  kafka
-18fa09d1b116  quay.io/debezium/connect:2.2        start       6 days ago  Up 6 days   0.0.0.0:8083->8083/tcp  connect
-a59d2286e7d1  quay.io/debezium/debezium-ui:2.2                6 days ago  Up 6 days   0.0.0.0:8080->8080/tcp  debezium-ui
+CONTAINER ID  IMAGE                                     COMMAND               CREATED         STATUS         PORTS                   NAMES
+c5bcbd907ab7  quay.io/strimzi/kafka:0.40.0-kafka-3.7.0  /bin/sh -c ./bin/...  15 seconds ago  Up 11 seconds  0.0.0.0:9092->9092/tcp  kafka
+85198a7a8c97  quay.io/debezium/example-mysql:2.6.0.Final        mysqld                14 seconds ago  Up 10 seconds  0.0.0.0:3306->3306/tcp  mysql
+808a633208b7  quay.io/debezium/connect:2.6.0.Final              start                 12 seconds ago  Up 9 seconds   0.0.0.0:8083->8083/tcp  connect
+4a401630ea8d  quay.io/debezium/debezium-ui:2.2                                11 seconds ago  Up 8 seconds   0.0.0.0:8080->8080/tcp  debezium-ui
 ----
 
 --
@@ -51,7 +50,7 @@ Docker::
 docker compose -f apps/infra/elementary/dbz-ui/compose.yaml up
 ----
 
-Quickly check if all 5 containers are up and running fine.
+Quickly check if all 4 containers are up and running fine.
 
 [.console-input]
 [source,adoc]
@@ -62,12 +61,11 @@ docker ps
 [.console-output]
 [source,adoc]
 ----
-CONTAINER ID   IMAGE                                COMMAND                  CREATED         STATUS                  PORTS                               NAMES
-45e4b8b1cd3a   quay.io/debezium/debezium-ui:2.2     "/deployments/run-ja…"   2 seconds ago   Up Less than a second   0.0.0.0:8080->8080/tcp              debezium-ui
-4ff3b282bd2b   quay.io/debezium/connect:2.2         "/docker-entrypoint.…"   3 seconds ago   Up 1 second             0.0.0.0:8083->8083/tcp, 9092/tcp    connect
-8150278a7fde   quay.io/debezium/kafka:2.2           "/docker-entrypoint.…"   3 seconds ago   Up 1 second             0.0.0.0:9092->9092/tcp              kafka
-c50d16e368c5   quay.io/debezium/example-mysql:2.2   "docker-entrypoint.s…"   3 seconds ago   Up 1 second             0.0.0.0:3306->3306/tcp, 33060/tcp   mysql
-e2a09a877e16   quay.io/debezium/zookeeper:2.2       "/docker-entrypoint.…"   3 seconds ago   Up 1 second             2181/tcp, 2888/tcp, 3888/tcp        zookeeper
+CONTAINER ID  IMAGE                                     COMMAND               CREATED         STATUS         PORTS                   NAMES
+c5bcbd907ab7  quay.io/strimzi/kafka:0.40.0-kafka-3.7.0  /bin/sh -c ./bin/...  15 seconds ago  Up 11 seconds  0.0.0.0:9092->9092/tcp  kafka
+85198a7a8c97  quay.io/debezium/example-mysql:2.6.0.Final        mysqld                14 seconds ago  Up 10 seconds  0.0.0.0:3306->3306/tcp  mysql
+808a633208b7  quay.io/debezium/connect:2.6.0.Final              start                 12 seconds ago  Up 9 seconds   0.0.0.0:8083->8083/tcp  connect
+4a401630ea8d  quay.io/debezium/debezium-ui:2.2                                11 seconds ago  Up 8 seconds   0.0.0.0:8080->8080/tcp  debezium-ui
 ----
 
 --
@@ -194,13 +192,15 @@ NOTE: The schema information in the payload has been removed from the JSON docum
       "email": "annek@noanswer.org"
     },
     "source": {
-      "version": "2.2.0.Final",
+      "version": "2.6.0.Final",
       "connector": "mysql",
       "name": "mydb1",
-      "ts_ms": 1690555772000,
+      "ts_ms": 1712130748000,
       "snapshot": "last_in_data_collection",
       "db": "inventory",
       "sequence": null,
+      "ts_us": 1712130748000000,
+      "ts_ns": 1712130748000000000,
       "table": "customers",
       "server_id": 0,
       "gtid": null,
@@ -211,7 +211,9 @@ NOTE: The schema information in the payload has been removed from the JSON docum
       "query": null
     },
     "op": "r",
-    "ts_ms": 1690555772308,
+    "ts_ms": 1712130748764,
+    "ts_us": 1712130748764950,
+    "ts_ns": 1712130748764950000,
     "transaction": null
   }
 }
@@ -264,13 +266,15 @@ NOTE: The schema information in the payload has been removed from the JSON docum
       "type": "LIVING"
     },
     "source": {
-      "version": "2.2.0.Final",
+      "version": "2.6.0.Final",
       "connector": "mysql",
       "name": "mydb1",
-      "ts_ms": 1690555772000,
+      "ts_ms": 1712130748000,
       "snapshot": "last",
       "db": "inventory",
       "sequence": null,
+      "ts_us": 1712130748000000,
+      "ts_ns": 1712130748000000000,
       "table": "addresses",
       "server_id": 0,
       "gtid": null,
@@ -281,7 +285,9 @@ NOTE: The schema information in the payload has been removed from the JSON docum
       "query": null
     },
     "op": "r",
-    "ts_ms": 1690555772330,
+    "ts_ms": 1712130748768,
+    "ts_us": 1712130748768202,
+    "ts_ns": 1712130748768202000,
     "transaction": null
   }
 }
@@ -301,15 +307,17 @@ NOTE: Make sure that besides Podman (Desktop) you also have `podman-compose` ins
 [.console-input]
 [source,adoc]
 ----
-podman-compose -f apps/infra/elementary/dbz-ui/compose.yaml down
+podman compose -f apps/infra/elementary/dbz-ui/compose.yaml down
 ----
 
 [.console-output]
 [source,adoc]
 ----
+>>>> Executing external compose provider "/opt/homebrew/bin/podman-compose". Please refer to the documentation for details. <<<<
+
 podman-compose version: 1.0.6
 ['podman', '--version', '']
-using podman version: 4.5.1
+using podman version: 5.0.1
 ** excluding:  set()
 podman stop -t 10 debezium-ui
 debezium-ui
@@ -317,14 +325,11 @@ exit code: 0
 podman stop -t 10 connect
 connect
 exit code: 0
-podman stop -t 10 kafka
-kafka
-exit code: 0
 podman stop -t 10 mysql
 mysql
 exit code: 0
-podman stop -t 10 zookeeper
-zookeeper
+podman stop -t 10 kafka
+kafka
 exit code: 0
 podman rm debezium-ui
 debezium-ui
@@ -332,14 +337,11 @@ exit code: 0
 podman rm connect
 connect
 exit code: 0
-podman rm kafka
-kafka
-exit code: 0
 podman rm mysql
 mysql
 exit code: 0
-podman rm zookeeper
-zookeeper
+podman rm kafka
+kafka
 exit code: 0
 ----
 
@@ -355,12 +357,11 @@ docker compose -f apps/infra/elementary/dbz-ui/compose.yaml down
 [.console-output]
 [source,adoc]
 ----
-[+] Running 6/6
+[+] Running 5/5
  ✔ Container debezium-ui  Removed   0.2s
  ✔ Container connect      Removed   0.6s
  ✔ Container mysql        Removed   1.0s
  ✔ Container kafka        Removed   1.1s
- ✔ Container zookeeper    Removed   0.5s
  ✔ Network dbz-ui         Removed
 ----
 --

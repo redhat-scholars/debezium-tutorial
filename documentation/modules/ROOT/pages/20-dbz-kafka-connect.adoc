@@ -13,9 +13,9 @@ For the example all required data infrastructure components are run as container
 
 == Start required services as containers
 
-Launch the following 4 containers each in its separate terminal window. This will allow to easily inspect their respective logs individually while working through the demo scenario step-by-step.
+Launch the following 3 containers each in its separate terminal window. This will allow to easily inspect their respective logs individually while working through the demo scenario step-by-step.
 
-=== 1. Zookeeper
+=== 1. Kafka
 
 [tabs]
 ====
@@ -30,12 +30,12 @@ First, let's start 1 pod which will host all containers needed for this demo sce
 podman pod create --name=dbz -p 9092:9092 -p 8083:8083 -p 5432:5432
 ----
 
-Then run the Zookeeper container in this pod as follows
+Then run the Kafka container in this pod as follows
 
 [.console-input]
 [source,adoc]
 ----
-podman run -it --rm --name zookeeper --pod dbz quay.io/debezium/zookeeper:2.2.0.Final
+podman run -it --rm --name kafka -e LOG_DIR=/tmp/logs --entrypoint='["/bin/sh", "-c" , "./bin/kafka-storage.sh format -t 9EDB9GBlQASth3IVRW0BCw -c ./config/kraft/server.properties && ./bin/kafka-server-start.sh ./config/kraft/server.properties --override advertised.listeners=PLAINTEXT://kafka:9092"]' --pod dbz quay.io/strimzi/kafka:0.40.0-kafka-3.7.0
 ----
 --
 Docker::
@@ -44,12 +44,12 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker run -it --rm --name zookeeper -p 2181:2181 -p 2888:2888 -p 3888:3888 quay.io/debezium/zookeeper:2.2.0.Final
+docker run -it --rm --name kafka -e LOG_DIR=/tmp/logs --entrypoint='["/bin/sh", "-c" , "./bin/kafka-storage.sh format -t 9EDB9GBlQASth3IVRW0BCw -c ./config/kraft/server.properties && ./bin/kafka-server-start.sh ./config/kraft/server.properties --override advertised.listeners=PLAINTEXT://kafka:9092"]' -p 9092:9092 quay.io/strimzi/kafka:0.40.0-kafka-3.7.0
 ----
 --
 ==== 
 
-=== 2. Kafka
+=== 2. postgreSQL
 
 [tabs]
 ====
@@ -59,7 +59,7 @@ Podman::
 [.console-input]
 [source,adoc]
 ----
-podman run -it --rm --name kafka --pod dbz quay.io/debezium/kafka:2.2.0.Final
+podman run -it --rm --name postgres --pod dbz -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.6.0.Final
 ----
 --
 Docker::
@@ -68,12 +68,12 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker run -it --rm --name kafka -p 9092:9092 --link zookeeper:zookeeper quay.io/debezium/kafka:2.2.0.Final
+docker run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.6.0.Final
 ----
 --
 ==== 
 
-=== 3. postgreSQL
+=== 3. Kafka Connect
 
 [tabs]
 ====
@@ -83,7 +83,7 @@ Podman::
 [.console-input]
 [source,adoc]
 ----
-podman run -it --rm --name postgres --pod dbz -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2.0.Final
+podman run -it --rm --name connect --pod dbz -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses quay.io/debezium/connect:2.6.0.Final
 ----
 --
 Docker::
@@ -92,31 +92,7 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2.0.Final
-----
---
-==== 
-
-=== 4. Kafka Connect
-
-[tabs]
-====
-Podman::
-+
---
-[.console-input]
-[source,adoc]
-----
-podman run -it --rm --name connect --pod dbz -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses quay.io/debezium/connect:2.2.0.Final
-----
---
-Docker::
-+
---
-[.console-input]
-[source,adoc]
-----
-docker run -it --rm --name connect -p 8083:8083 -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses --link kafka:kafka --link postgres:postgres quay.io/debezium/connect:2.2.0.Final
+docker run -it --rm --name connect -p 8083:8083 -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses --link kafka:kafka --link postgres:postgres quay.io/debezium/connect:2.6.0.Final
 ----
 --
 ==== 
@@ -198,7 +174,7 @@ curl -H "Accept:application/json" localhost:8083/
 [.console-output]
 [source,adoc]
 ----
-{"version":"3.4.0","commit":"2e1947d240607d53","kafka_cluster_id":"BCez9UHGS-eBpmZ8eBZd6g"}
+{"version":"3.7.0","commit":"2ae524ed625438c5","kafka_cluster_id":"9EDB9GBlQASth3IVRW0BCw"}
 ----
 
 [.console-input]
@@ -274,12 +250,12 @@ curl -i -X GET -H "Accept:application/json" localhost:8083/connectors/inventory-
 [source,adoc]
 ----
 HTTP/1.1 200 OK
-Date: Wed, 14 Jun 2023 07:16:38 GMT
+Date: Wed, 03 Apr 2024 09:55:24 GMT
 Content-Type: application/json
-Content-Length: 175
-Server: Jetty(9.4.48.v20220622)
+Content-Length: 173
+Server: Jetty(9.4.53.v20231009)
 
-{"name":"inventory-connector","connector":{"state":"RUNNING","worker_id":"172.17.0.5:8083"},"tasks":[{"id":0,"state":"RUNNING","worker_id":"172.17.0.5:8083"}],"type":"source"}
+{"name":"inventory-connector","connector":{"state":"RUNNING","worker_id":"10.88.0.2:8083"},"tasks":[{"id":0,"state":"RUNNING","worker_id":"10.88.0.2:8083"}],"type":"source"}
 ----
 
 
@@ -295,7 +271,15 @@ Podman::
 [.console-input]
 [source,adoc]
 ----
-podman run -it --rm --name watcher --pod dbz quay.io/debezium/kafka:2.2.0.Final watch-topic -a -k dbserver1.inventory.customers
+podman run -it --rm --name watcher --pod dbz quay.io/debezium/kafka:2.6.0.Final watch-topic -a -k dbserver1.inventory.customers
+----
+[.console-output]
+[source,adoc]
+----
+{"id":1001}	{"before":null,"after":{"id":1001,"first_name":"Sally","last_name":"Thomas","email":"sally.thomas@acme.com"},"source":{"version":"2.6.0.Final","connector":"postgresql","name":"dbserver1","ts_ms":1712137236371,"snapshot":"first","db":"postgres","sequence":"[null,\"34065104\"]","ts_us":1712137236371603,"ts_ns":1712137236371603000,"schema":"inventory","table":"customers","txId":769,"lsn":34065104,"xmin":null},"op":"r","ts_ms":1712137236420,"ts_us":1712137236420161,"ts_ns":1712137236420161000,"transaction":null}
+{"id":1002}	{"before":null,"after":{"id":1002,"first_name":"George","last_name":"Bailey","email":"gbailey@foobar.com"},"source":{"version":"2.6.0.Final","connector":"postgresql","name":"dbserver1","ts_ms":1712137236371,"snapshot":"true","db":"postgres","sequence":"[null,\"34065104\"]","ts_us":1712137236371603,"ts_ns":1712137236371603000,"schema":"inventory","table":"customers","txId":769,"lsn":34065104,"xmin":null},"op":"r","ts_ms":1712137236422,"ts_us":1712137236422581,"ts_ns":1712137236422581000,"transaction":null}
+{"id":1003}	{"before":null,"after":{"id":1003,"first_name":"Edward","last_name":"Walker","email":"ed@walker.com"},"source":{"version":"2.6.0.Final","connector":"postgresql","name":"dbserver1","ts_ms":1712137236371,"snapshot":"true","db":"postgres","sequence":"[null,\"34065104\"]","ts_us":1712137236371603,"ts_ns":1712137236371603000,"schema":"inventory","table":"customers","txId":769,"lsn":34065104,"xmin":null},"op":"r","ts_ms":1712137236422,"ts_us":1712137236422816,"ts_ns":1712137236422816000,"transaction":null}
+{"id":1004}	{"before":null,"after":{"id":1004,"first_name":"Anne","last_name":"Kretchmar","email":"annek@noanswer.org"},"source":{"version":"2.6.0.Final","connector":"postgresql","name":"dbserver1","ts_ms":1712137236371,"snapshot":"last","db":"postgres","sequence":"[null,\"34065104\"]","ts_us":1712137236371603,"ts_ns":1712137236371603000,"schema":"inventory","table":"customers","txId":769,"lsn":34065104,"xmin":null},"op":"r","ts_ms":1712137236423,"ts_us":1712137236423117,"ts_ns":1712137236423117000,"transaction":null}
 ----
 --
 Docker::
@@ -304,15 +288,15 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker run -it --rm --name watcher --link zookeeper:zookeeper --link kafka:kafka quay.io/debezium/kafka:2.2.0.Final watch-topic -a -k dbserver1.inventory.customers
+docker run -it --rm --name watcher --link kafka:kafka quay.io/debezium/kafka:2.6.0.Final watch-topic -a -k dbserver1.inventory.customers
 ----
 [.console-output]
 [source,adoc]
 ----
-{"id":1001}	{"before":null,"after":{"id":1001,"first_name":"Sally","last_name":"Thomas","email":"sally.thomas@acme.com"},"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686727747318,"snapshot":"first","db":"postgres","sequence":"[null,\"34487680\"]","schema":"inventory","table":"customers","txId":768,"lsn":34487680,"xmin":null},"op":"r","ts_ms":1686727747354,"transaction":null}
-{"id":1002}	{"before":null,"after":{"id":1002,"first_name":"George","last_name":"Bailey","email":"gbailey@foobar.com"},"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686727747318,"snapshot":"true","db":"postgres","sequence":"[null,\"34487680\"]","schema":"inventory","table":"customers","txId":768,"lsn":34487680,"xmin":null},"op":"r","ts_ms":1686727747356,"transaction":null}
-{"id":1003}	{"before":null,"after":{"id":1003,"first_name":"Edward","last_name":"Walker","email":"ed@walker.com"},"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686727747318,"snapshot":"true","db":"postgres","sequence":"[null,\"34487680\"]","schema":"inventory","table":"customers","txId":768,"lsn":34487680,"xmin":null},"op":"r","ts_ms":1686727747356,"transaction":null}
-{"id":1004}	{"before":null,"after":{"id":1004,"first_name":"Anne","last_name":"Kretchmar","email":"annek@noanswer.org"},"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686727747318,"snapshot":"last","db":"postgres","sequence":"[null,\"34487680\"]","schema":"inventory","table":"customers","txId":768,"lsn":34487680,"xmin":null},"op":"r","ts_ms":1686727747356,"transaction":null}
+{"id":1001}	{"before":null,"after":{"id":1001,"first_name":"Sally","last_name":"Thomas","email":"sally.thomas@acme.com"},"source":{"version":"2.6.0.Final","connector":"postgresql","name":"dbserver1","ts_ms":1712137236371,"snapshot":"first","db":"postgres","sequence":"[null,\"34065104\"]","ts_us":1712137236371603,"ts_ns":1712137236371603000,"schema":"inventory","table":"customers","txId":769,"lsn":34065104,"xmin":null},"op":"r","ts_ms":1712137236420,"ts_us":1712137236420161,"ts_ns":1712137236420161000,"transaction":null}
+{"id":1002}	{"before":null,"after":{"id":1002,"first_name":"George","last_name":"Bailey","email":"gbailey@foobar.com"},"source":{"version":"2.6.0.Final","connector":"postgresql","name":"dbserver1","ts_ms":1712137236371,"snapshot":"true","db":"postgres","sequence":"[null,\"34065104\"]","ts_us":1712137236371603,"ts_ns":1712137236371603000,"schema":"inventory","table":"customers","txId":769,"lsn":34065104,"xmin":null},"op":"r","ts_ms":1712137236422,"ts_us":1712137236422581,"ts_ns":1712137236422581000,"transaction":null}
+{"id":1003}	{"before":null,"after":{"id":1003,"first_name":"Edward","last_name":"Walker","email":"ed@walker.com"},"source":{"version":"2.6.0.Final","connector":"postgresql","name":"dbserver1","ts_ms":1712137236371,"snapshot":"true","db":"postgres","sequence":"[null,\"34065104\"]","ts_us":1712137236371603,"ts_ns":1712137236371603000,"schema":"inventory","table":"customers","txId":769,"lsn":34065104,"xmin":null},"op":"r","ts_ms":1712137236422,"ts_us":1712137236422816,"ts_ns":1712137236422816000,"transaction":null}
+{"id":1004}	{"before":null,"after":{"id":1004,"first_name":"Anne","last_name":"Kretchmar","email":"annek@noanswer.org"},"source":{"version":"2.6.0.Final","connector":"postgresql","name":"dbserver1","ts_ms":1712137236371,"snapshot":"last","db":"postgres","sequence":"[null,\"34065104\"]","ts_us":1712137236371603,"ts_ns":1712137236371603000,"schema":"inventory","table":"customers","txId":769,"lsn":34065104,"xmin":null},"op":"r","ts_ms":1712137236423,"ts_us":1712137236423117,"ts_ns":1712137236423117000,"transaction":null}
 ----
 --
 ==== 
@@ -337,21 +321,25 @@ The console output shows all 4 database table rows have been captured by the ini
     "email": "annek@noanswer.org"
   },
   "source": {
-    "version": "2.0.1.Final",
+    "version": "2.6.0.Final",
     "connector": "postgresql",
     "name": "dbserver1",
-    "ts_ms": 1686727747318,
+    "ts_ms": 1712137236371,
     "snapshot": "last",
     "db": "postgres",
-    "sequence": "[null,\"34487680\"]",
+    "sequence": "[null,\"34065104\"]",
+    "ts_us": 1712137236371603,
+    "ts_ns": 1712137236371603000,
     "schema": "inventory",
     "table": "customers",
-    "txId": 768,
-    "lsn": 34487680,
+    "txId": 769,
+    "lsn": 34065104,
     "xmin": null
   },
   "op": "r",
-  "ts_ms": 1686727747356,
+  "ts_ms": 1712137236423,
+  "ts_us": 1712137236423117,
+  "ts_ns": 1712137236423117000,
   "transaction": null
 }
 ```
@@ -384,7 +372,7 @@ Switch over to the "watcher" terminal window to see that the kafka topic in ques
 [.console-output]
 [source,adoc]
 ----
-{"id":1004} {"before":{"id":1004,"first_name":"Anne","last_name":"Kretchmar","email":"annek@noanswer.org"},"after":{"id":1004,"first_name":"Anne Marie","last_name":"Kretchmar","email":"annek@noanswer.org"},"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686729166190,"snapshot":"false","db":"postgres","sequence":"[null,\"34488008\"]","schema":"inventory","table":"customers","txId":769,"lsn":34488008,"xmin":null},"op":"u","ts_ms":1686729166517,"transaction":null}
+{"id":1004}	{"before":{"id":1004,"first_name":"Anne","last_name":"Kretchmar","email":"annek@noanswer.org"},"after":{"id":1004,"first_name":"Anne Marie","last_name":"Kretchmar","email":"annek@noanswer.org"},"source":{"version":"2.6.0.Final","connector":"postgresql","name":"dbserver1","ts_ms":1712137566663,"snapshot":"false","db":"postgres","sequence":"[\"34471888\",\"34494936\"]","ts_us":1712137566663452,"ts_ns":1712137566663452000,"schema":"inventory","table":"customers","txId":773,"lsn":34494936,"xmin":null},"op":"u","ts_ms":1712137566897,"ts_us":1712137566897584,"ts_ns":1712137566897584000,"transaction":null}
 ----
 
 Let's take a closer look at the Kafka record's value part for this CDC event. The main difference here is that we are dealing with an update event (`"op":"u"`). For update events we now have both fields set:
@@ -407,21 +395,25 @@ Let's take a closer look at the Kafka record's value part for this CDC event. Th
     "email": "annek@noanswer.org"
   },
   "source": {
-    "version": "2.0.1.Final",
+    "version": "2.6.0.Final",
     "connector": "postgresql",
     "name": "dbserver1",
-    "ts_ms": 1686729166190,
+    "ts_ms": 1712137566663,
     "snapshot": "false",
     "db": "postgres",
-    "sequence": "[null,\"34488008\"]",
+    "sequence": "[\"34471888\",\"34494936\"]",
+    "ts_us": 1712137566663452,
+    "ts_ns": 1712137566663452000,
     "schema": "inventory",
     "table": "customers",
-    "txId": 769,
-    "lsn": 34488008,
+    "txId": 773,
+    "lsn": 34494936,
     "xmin": null
   },
   "op": "u",
-  "ts_ms": 1686729166517,
+  "ts_ms": 1712137566897,
+  "ts_us": 1712137566897584,
+  "ts_ns": 1712137566897584000,
   "transaction": null
 }
 ```
@@ -456,38 +448,42 @@ When deleting a row from the `inventory.customers` table, the Debezium source co
 [.console-output]
 [source,adoc]
 ----
-{"id":1004} {"before":{"id":1004,"first_name":"Anne Marie","last_name":"Kretchmar","email":"annek@noanswer.org"},"after":null,"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686729872614,"snapshot":"false","db":"postgres","sequence":"[\"34488608\",\"34488896\"]","schema":"inventory","table":"customers","txId":770,"lsn":34488896,"xmin":null},"op":"d","ts_ms":1686729873091,"transaction":null}
-{"id":1004} null
+{"id":1004}	{"before":{"id":1004,"first_name":"Anne Marie","last_name":"Kretchmar","email":"annek@noanswer.org"},"after":null,"source":{"version":"2.6.0.Final","connector":"postgresql","name":"dbserver1","ts_ms":1712137703621,"snapshot":"false","db":"postgres","sequence":"[\"34495512\",\"34495568\"]","ts_us":1712137703621182,"ts_ns":1712137703621182000,"schema":"inventory","table":"customers","txId":774,"lsn":34495568,"xmin":null},"op":"d","ts_ms":1712137703796,"ts_us":1712137703796483,"ts_ns":1712137703796483000,"transaction":null}
+{"id":1004}	null
 ----
 
 **CDC event record value: **Since we are dealing with a deletion operation (`"op":"d"`), there is only the `before` field set which contains the table's row values before the deletion happened. The `after` field is `null` in this case, as the data has been removed.
 
 ```json
 {
-  "before": {
-    "id": 1004,
-    "first_name": "Anne Marie",
-    "last_name": "Kretchmar",
-    "email": "annek@noanswer.org"
-  },
-  "after": null,
-  "source": {
-    "version": "2.0.1.Final",
-    "connector": "postgresql",
-    "name": "dbserver1",
-    "ts_ms": 1686729872614,
-    "snapshot": "false",
-    "db": "postgres",
-    "sequence": "[\"34488608\",\"34488896\"]",
-    "schema": "inventory",
-    "table": "customers",
-    "txId": 770,
-    "lsn": 34488896,
-    "xmin": null
-  },
-  "op": "d",
-  "ts_ms": 1686729873091,
-  "transaction": null
+    "before": {
+        "id": 1004,
+        "first_name": "Anne Marie",
+        "last_name": "Kretchmar",
+        "email": "annek@noanswer.org"
+    },
+    "after": null,
+    "source": {
+        "version": "2.6.0.Final",
+        "connector": "postgresql",
+        "name": "dbserver1",
+        "ts_ms": 1712137703621,
+        "snapshot": "false",
+        "db": "postgres",
+        "sequence": "[\"34495512\",\"34495568\"]",
+        "ts_us": 1712137703621182,
+        "ts_ns": 1712137703621182000,
+        "schema": "inventory",
+        "table": "customers",
+        "txId": 774,
+        "lsn": 34495568,
+        "xmin": null
+    },
+    "op": "d",
+    "ts_ms": 1712137703796,
+    "ts_us": 1712137703796483,
+    "ts_ns": 1712137703796483000,
+    "transaction": null
 }
 ```
 
@@ -576,7 +572,7 @@ Podman::
 [.console-input]
 [source,adoc]
 ----
-podman run -it --rm --name connect --pod dbz -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses quay.io/debezium/connect:2.2.0.Final
+podman run -it --rm --name connect --pod dbz -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses quay.io/debezium/connect:2.6.0.Final
 ----
 --
 Docker::
@@ -585,7 +581,7 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker run -it --rm --name connect -p 8083:8083 -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses --link zookeeper:zookeeper --link kafka:kafka --link postgres:postgres quay.io/debezium/connect:2.2.0.Final
+docker run -it --rm --name connect -p 8083:8083 -e GROUP_ID=1 -e CONFIG_STORAGE_TOPIC=my_connect_configs -e OFFSET_STORAGE_TOPIC=my_connect_offsets -e STATUS_STORAGE_TOPIC=my_connect_statuses --link kafka:kafka --link postgres:postgres quay.io/debezium/connect:2.6.0.Final
 ----
 --
 ==== 
@@ -597,8 +593,8 @@ Switch over to the "watcher" terminal window to see that the kafka topic in ques
 [.console-output]
 [source,adoc]
 ----
-{"id":1005} {"before":null,"after":{"id":1005,"first_name":"Sarah","last_name":"Thompson","email":"kitt@acme.com"},"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686732230489,"snapshot":"false","db":"postgres","sequence":"[\"34489480\",\"34489816\"]","schema":"inventory","table":"customers","txId":771,"lsn":34489816,"xmin":null},"op":"c","ts_ms":1686732629473,"transaction":null}
-{"id":1006} {"before":null,"after":{"id":1006,"first_name":"Kenneth","last_name":"Anderson","email":"kander@acme.com"},"source":{"version":"2.0.1.Final","connector":"postgresql","name":"dbserver1","ts_ms":1686732230493,"snapshot":"false","db":"postgres","sequence":"[\"34490856\",\"34490856\"]","schema":"inventory","table":"customers","txId":772,"lsn":34490856,"xmin":null},"op":"c","ts_ms":1686732629475,"transaction":null}
+{"id":1005}	{"before":null,"after":{"id":1005,"first_name":"Sarah","last_name":"Thompson","email":"kitt@acme.com"},"source":{"version":"2.6.0.Final","connector":"postgresql","name":"dbserver1","ts_ms":1712138241736,"snapshot":"false","db":"postgres","sequence":"[\"34495776\",\"34496168\"]","ts_us":1712138241736017,"ts_ns":1712138241736017000,"schema":"inventory","table":"customers","txId":775,"lsn":34496168,"xmin":null},"op":"c","ts_ms":1712138332755,"ts_us":1712138332755295,"ts_ns":1712138332755295000,"transaction":null}
+{"id":1006}	{"before":null,"after":{"id":1006,"first_name":"Kenneth","last_name":"Anderson","email":"kander@acme.com"},"source":{"version":"2.6.0.Final","connector":"postgresql","name":"dbserver1","ts_ms":1712138241738,"snapshot":"false","db":"postgres","sequence":"[\"34497232\",\"34497232\"]","ts_us":1712138241738812,"ts_ns":1712138241738812000,"schema":"inventory","table":"customers","txId":776,"lsn":34497232,"xmin":null},"op":"c","ts_ms":1712138332757,"ts_us":1712138332757756,"ts_ns":1712138332757756000,"transaction":null}
 ----
 
 == Clean up
@@ -619,7 +615,7 @@ podman pod rm -f dbz
 [source,adoc]
 ----
 #YOUR DELETED POD's ID HERE e.g.
-a94642f7b74edb020a7e0a6142e844c94c46d7320a8a69fe5d17c8c9b1c22020
+22080dfb8b33ab9172cae2563815e33bfcb47d8700681801d2a870583e80ca7f
 ----
 --
 Docker::
@@ -628,7 +624,7 @@ Docker::
 [.console-input]
 [source,adoc]
 ----
-docker stop connect watcher postgres kafka zookeeper
+docker stop connect watcher postgres kafka
 ----
 [.console-output]
 [source,adoc]
@@ -637,7 +633,6 @@ connect
 watcher
 postgres
 kafka
-zookeeper
 ----
 --
 ==== 
