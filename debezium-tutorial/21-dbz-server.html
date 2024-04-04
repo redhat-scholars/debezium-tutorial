@@ -129,32 +129,16 @@
 <img src="_images/dbz-tutorial-elementary-debezium-server-example-basic.png" alt="Debezium Server Demo Scenario">
 </div>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_debezium_server_installation"><a class="anchor" href="#_debezium_server_installation"></a>Debezium Server Installation</h2>
-<div class="sectionbody">
 <div class="paragraph">
-<p>To install Debezium Server download and unpack the <a href="https://repo1.maven.org/maven2/io/debezium/debezium-server-dist/2.2.1.Final/debezium-server-dist-2.2.1.Final.tar.gz">server distribution archive</a>.</p>
+<p>For the example all required data infrastructure components are run as containers locally, either with Podman or Docker. <strong>It&#8217;s important to note, that all containers are configured as <em>single ephemeral instances</em> which means that all state and data is lost after shutting them down!</strong></p>
 </div>
 <div class="paragraph">
-<p>A directory named debezium-server will be created with these contents:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">debezium-server
-├── conf
-├── debezium-server-dist-2.2.1.Final-runner.jar
-├── lib
-├── lib_opt
-├── run.bat
-└── run.sh</code></pre>
-</div>
+<p>Launch the following 2 containers each in its separate terminal window. This will allow to easily inspect their respective logs individually while working through the demo scenario step-by-step.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_run_a_containerized_postgresql_instance"><a class="anchor" href="#_run_a_containerized_postgresql_instance"></a>Run a containerized postgreSQL instance</h2>
+<h2 id="_containerized_postgresql"><a class="anchor" href="#_containerized_postgresql"></a>Containerized PostgreSQL</h2>
 <div class="sectionbody">
 <div class="tabset is-loading">
 <div class="ulist tabs">
@@ -169,16 +153,27 @@
 </div>
 <div class="content">
 <div class="tab-pane" aria-labelledby="tabset1_podman">
+<div class="paragraph">
+<p>First, let&#8217;s start 1 pod which will host the containers needed for this demo scenario.</p>
+</div>
 <div class="listingblock console-input">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2.0.Final</code></pre>
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman pod create --name=dbz -p 5432:5432 -p 8080:8080</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Then run the PostgreSQL container in this pod as follows</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman run -it --rm --name postgres --pod dbz -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.6.0.Final</code></pre>
 </div>
 </div>
 </div>
 <div class="tab-pane" aria-labelledby="tabset1_docker">
 <div class="listingblock console-input">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.2.0.Final</code></pre>
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker run -it --rm --name postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres quay.io/debezium/example-postgres:2.6.0.Final</code></pre>
 </div>
 </div>
 </div>
@@ -187,10 +182,10 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="_setup_cdc_pipeline_with_debezium_server"><a class="anchor" href="#_setup_cdc_pipeline_with_debezium_server"></a>Setup CDC Pipeline with Debezium Server</h2>
+<h2 id="_containerized_debezium_server"><a class="anchor" href="#_containerized_debezium_server"></a>Containerized Debezium Server</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_1_configure_debezium_server"><a class="anchor" href="#_1_configure_debezium_server"></a>1. Configure Debezium Server</h3>
+<h3 id="_1_configuration_of_cdc_pipeline"><a class="anchor" href="#_1_configuration_of_cdc_pipeline"></a>1. Configuration of CDC Pipeline</h3>
 <div class="paragraph">
 <p>The following configuration for Debezium Server will create a CDC pipeline between a postgreSQL instance and a mock/test HTTP endpoint provided by <a href="https://webhook.site/" class="bare">https://webhook.site/</a>.</p>
 </div>
@@ -210,7 +205,10 @@ This HTTP sink just serves an example target for sending Debezium&#8217;s CDC ev
 <p>Copy your unique <code>webhook.site</code> URL which follows this pattern <code><a href="https://webhook.site/&lt;YOUR_INDIVIDUAL_UUID_HERE&gt" class="bare">https://webhook.site/&lt;YOUR_INDIVIDUAL_UUID_HERE&gt</a>;</code> and ends with an individual UUID. You&#8217;ll need this URL for the configuration file below.</p>
 </div>
 <div class="paragraph">
-<p>The first step is to <strong>provide a configuration file for Debezium Server</strong> to specify all necessary <strong>settings for the postgreSQL source</strong> (i.e. where to capture CDC events from) <strong>and the HTTP sink</strong> (i.e. where to write CDC events to) to be used. Create a file called <code>application.properties</code> in the <code>conf/</code> sub-folder of the <code>debezium-server</code> folder with the following contents and make sure to use your individual <code>webhook.site</code> URL.</p>
+<p>The first step is to <strong>provide a configuration file for Debezium Server</strong> to specify all necessary <strong>settings for the postgreSQL source</strong> (i.e. where to capture CDC events from) <strong>and the HTTP sink</strong> (i.e. where to write CDC events to) to be used.</p>
+</div>
+<div class="paragraph">
+<p>Navigate into to <code>apps/infra/elementary/dbz-server/config/application.properties</code> and open the file in an editor of your choice. <strong>Please make sure to use your individual <code>webhook.site</code> URL</strong> (see last line in this file):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -225,9 +223,9 @@ debezium.format.value=json
 # Debezium Server source settings for postgreSQL
 
 debezium.source.connector.class=io.debezium.connector.postgresql.PostgresConnector
-debezium.source.offset.storage.file.filename=offsets.dat
+debezium.source.offset.storage.file.filename=/debezium/data/offsets.dat
 debezium.source.offset.flush.interval.ms=0
-debezium.source.database.hostname=localhost
+debezium.source.database.hostname=postgres
 debezium.source.database.port=5432
 debezium.source.database.user=postgres
 debezium.source.database.password=postgres
@@ -247,11 +245,36 @@ debezium.sink.http.url=https://webhook.site/&lt;YOUR_INDIVIDUAL_UUID_HERE&gt;</c
 </div>
 <div class="sect2">
 <h3 id="_2_run_debezium_server"><a class="anchor" href="#_2_run_debezium_server"></a>2. Run Debezium Server</h3>
-<div class="paragraph">
-<p>From within <code>debezium-server</code> folder start the application with either <code>./run.sh</code> (Mac OS / Linux) or <code>run.bat</code> (Windows).</p>
+<div class="tabset is-loading">
+<div class="ulist tabs">
+<ul>
+<li>
+<p><a id="tabset2_podman"></a>Podman</p>
+</li>
+<li>
+<p><a id="tabset2_docker"></a>Docker</p>
+</li>
+</ul>
+</div>
+<div class="content">
+<div class="tab-pane" aria-labelledby="tabset2_podman">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman run -it --rm --name dbz-server --pod dbz -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data quay.io/debezium/server:2.6.0.Final</code></pre>
+</div>
+</div>
+</div>
+<div class="tab-pane" aria-labelledby="tabset2_docker">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker run -it --rm --name dbz-server -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data -p 8080:8080 --link postgres:postgres quay.io/debezium/server:2.6.0.Final</code></pre>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div class="paragraph">
-<p>The following is a sample log output for a successful initial snapshot taken by Debezium Server against the <code>inventory.customers</code> table in postgreSQL. Several "less interesting log" sections have been removed for brevity&#8217;s sake:</p>
+<p>The following is a sample log output for a successful initial snapshot taken by Debezium Server against the <code>inventory.customers</code> table in postgreSQL. Several "less interesting" log sections have been removed for brevity&#8217;s sake:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -263,44 +286,58 @@ debezium.sink.http.url=https://webhook.site/&lt;YOUR_INDIVIDUAL_UUID_HERE&gt;</c
 
 
 
-                       Powered by Quarkus 3.0.0.Final
-2023-06-13 16:09:56,761 INFO  [io.deb.ser.BaseChangeConsumer] (main) Using 'io.debezium.server.BaseChangeConsumer$$Lambda$162/0x00000008002757e0@4d8539de' stream name mapper
-2023-06-13 16:09:56,843 INFO  [io.deb.ser.htt.HttpChangeConsumer] (main) Using http content-type type application/json
-2023-06-13 16:09:56,844 INFO  [io.deb.ser.htt.HttpChangeConsumer] (main) Using sink URL: https://webhook.site/6776612c-a8ed-4487-9d90-561bad156357
-2023-06-13 16:09:56,844 INFO  [io.deb.ser.DebeziumServer] (main) Consumer 'io.debezium.server.http.HttpChangeConsumer' instantiated
+                      Powered by Quarkus 3.2.11.Final
+2024-04-03 11:43:59,574 INFO  [io.deb.ser.BaseChangeConsumer] (main) Using 'io.debezium.server.BaseChangeConsumer$$Lambda$232/0x00000001003c6440@697a34af' stream name mapper
+2024-04-03 11:43:59,604 INFO  [io.deb.ser.htt.HttpChangeConsumer] (main) Using http content-type type application/json
+2024-04-03 11:43:59,604 INFO  [io.deb.ser.htt.HttpChangeConsumer] (main) Using sink URL: https://webhook.site/0e8dbb91-4dd8-458e-bd75-617ccea4003c
+2024-04-03 11:43:59,605 INFO  [io.deb.ser.DebeziumServer] (main) Consumer 'io.debezium.server.http.HttpChangeConsumer' instantiated
 
 ...
 
-2023-06-13 16:09:56,996 INFO  [io.deb.ser.DebeziumServer] (main) Engine executor started
-2023-06-13 16:09:57,085 INFO  [io.quarkus] (main) debezium-server-dist 2.2.1.Final on JVM (powered by Quarkus 3.0.0.Final) started in 0.904s. Listening on: http://0.0.0.0:8080
-2023-06-13 16:09:57,086 INFO  [io.quarkus] (main) Profile prod activated.
-2023-06-13 16:09:57,086 INFO  [io.quarkus] (main) Installed features: [cdi, resteasy-jackson, smallrye-context-propagation, smallrye-health, vertx]
-2023-06-13 16:09:57,143 INFO  [io.deb.con.pos.PostgresConnector] (pool-6-thread-1) Successfully tested connection for jdbc:postgresql://localhost:5432/postgres with user 'postgres'
-2023-06-13 16:09:57,156 INFO  [io.deb.jdb.JdbcConnection] (pool-7-thread-1) Connection gracefully closed
-2023-06-13 16:09:57,161 INFO  [org.apa.kaf.con.sto.FileOffsetBackingStore] (pool-6-thread-1) Starting FileOffsetBackingStore with file offsets.dat
+2024-04-03 11:43:59,700 INFO  [io.deb.ser.DebeziumServer] (main) Engine executor started
+2024-04-03 11:43:59,701 INFO  [io.deb.emb.asy.AsyncEmbeddedEngine] (pool-7-thread-1) Engine state has changed from 'CREATING' to 'INITIALIZING'
+2024-04-03 11:43:59,757 INFO  [io.deb.con.CommonConnectorConfig] (pool-7-thread-1) Loading the custom source info struct maker plugin: io.debezium.connector.postgresql.PostgresSourceInfoStructMaker
+2024-04-03 11:43:59,828 INFO  [io.quarkus] (main) debezium-server-dist 2.6.0.CR1 on JVM (powered by Quarkus 3.2.11.Final) started in 1.548s. Listening on: http://0.0.0.0:8080
+2024-04-03 11:43:59,830 INFO  [io.quarkus] (main) Profile prod activated.
+2024-04-03 11:43:59,831 INFO  [io.quarkus] (main) Installed features: [cdi, kubernetes-client, resteasy-jackson, smallrye-context-propagation, smallrye-health, vertx]
+2024-04-03 11:43:59,885 INFO  [io.deb.con.pos.PostgresConnector] (pool-7-thread-1) Successfully tested connection for jdbc:postgresql://postgres:5432/postgres with user 'postgres'
+2024-04-03 11:43:59,892 INFO  [io.deb.jdb.JdbcConnection] (pool-10-thread-1) Connection gracefully closed
+2024-04-03 11:43:59,899 INFO  [org.apa.kaf.con.jso.JsonConverterConfig] (pool-7-thread-1) JsonConverterConfig values:
+	converter.type = key
+	decimal.format = BASE64
+	replace.null.with.default = true
+	schemas.cache.size = 1000
+	schemas.enable = false
+
+2024-04-03 11:43:59,900 INFO  [org.apa.kaf.con.sto.FileOffsetBackingStore] (pool-7-thread-1) Starting FileOffsetBackingStore with file offsets.dat
 
 ...
 
-2023-06-13 16:09:57,277 INFO  [io.deb.con.pos.PostgresConnectorTask] (pool-6-thread-1) No previous offset found
-(debezium-postgresconnector-dbzserver-change-event-source-coordinator) Taking initial snapshot for new datasource
-2023-06-13 16:09:57,328 INFO  [io.deb.con.pos.PostgresSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) According to the connector configuration data will be snapshotted
-2023-06-13 16:09:57,328 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot step 1 - Preparing
-2023-06-13 16:09:57,345 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot step 2 - Determining captured tables
+2024-04-03 11:44:00,037 INFO  [io.deb.con.pos.con.PostgresConnection] (pool-8-thread-1) Obtained valid replication slot ReplicationSlot [active=false, latestFlushedLsn=null, catalogXmin=null]
+2024-04-03 11:44:00,037 INFO  [io.deb.con.pos.PostgresConnectorTask] (pool-8-thread-1) No previous offset found
+2024-04-03 11:44:00,055 INFO  [io.deb.con.pos.con.PostgresReplicationConnection] (pool-8-thread-1) Creating replication slot with command CREATE_REPLICATION_SLOT "dbzserver123"  LOGICAL decoderbufs
+2024-04-03 11:44:00,072 INFO  [io.deb.uti.Threads] (pool-8-thread-1) Requested thread factory for connector PostgresConnector, id = dbzserver named = SignalProcessor
+2024-04-03 11:44:00,085 INFO  [io.deb.uti.Threads] (pool-8-thread-1) Requested thread factory for connector PostgresConnector, id = dbzserver named = change-event-source-coordinator
+2024-04-03 11:44:00,085 INFO  [io.deb.uti.Threads] (pool-8-thread-1) Requested thread factory for connector PostgresConnector, id = dbzserver named = blocking-snapshot
+2024-04-03 11:44:00,093 INFO  [io.deb.uti.Threads] (pool-8-thread-1) Creating thread debezium-postgresconnector-dbzserver-change-event-source-coordinator
+2024-04-03 11:44:00,094 INFO  [io.deb.emb.asy.AsyncEmbeddedEngine] (pool-7-thread-1) All tasks have stated successfully.
+2024-04-03 11:44:00,094 INFO  [io.deb.emb.asy.AsyncEmbeddedEngine] (pool-7-thread-1) Engine state has changed from 'STARTING_TASKS' to 'POLLING_TASKS'
 
 ...
 
-2023-06-13 16:09:57,370 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Creating snapshot worker pool with 1 worker thread(s)
-2023-06-13 16:09:57,372 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) For table 'inventory.customers' using select statement: 'SELECT "id", "first_name", "last_name", "email" FROM "inventory"."customers"'
-2023-06-13 16:09:57,373 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (pool-9-thread-1) Exporting data from table 'inventory.customers' (1 of 1 tables)
-2023-06-13 16:09:57,391 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (pool-9-thread-1) 	 Finished exporting 5 records for table 'inventory.customers' (1 of 1 tables); total duration '00:00:00.018'
-2023-06-13 16:09:57,393 INFO  [io.deb.pip.sou.AbstractSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot - Final stage
-2023-06-13 16:09:57,393 INFO  [io.deb.pip.sou.AbstractSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot completed
+2024-04-03 11:44:00,180 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Creating snapshot worker pool with 1 worker thread(s)
+2024-04-03 11:44:00,183 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) For table 'inventory.customers' using select statement: 'SELECT "id", "first_name", "last_name", "email" FROM "inventory"."customers"'
+2024-04-03 11:44:00,187 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (pool-12-thread-1) Exporting data from table 'inventory.customers' (1 of 1 tables)
+2024-04-03 11:44:00,201 INFO  [io.deb.rel.RelationalSnapshotChangeEventSource] (pool-12-thread-1) 	 Finished exporting 4 records for table 'inventory.customers' (1 of 1 tables); total duration '00:00:00.014'
+2024-04-03 11:44:00,203 INFO  [io.deb.pip.sou.AbstractSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot - Final stage
+2024-04-03 11:44:00,203 INFO  [io.deb.pip.sou.AbstractSnapshotChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Snapshot completed
 
 ...
 
-2023-06-13 16:09:57,469 INFO  [io.deb.uti.Threads] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Creating thread debezium-postgresconnector-dbzserver-keep-alive
-2023-06-13 16:09:57,475 INFO  [io.deb.con.pos.PostgresSchema] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) REPLICA IDENTITY for 'inventory.customers' is 'FULL'; UPDATE AND DELETE events will contain the previous values of all the columns
-2023-06-13 16:09:57,475 INFO  [io.deb.con.pos.PostgresStreamingChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Searching for WAL resume position
+2024-04-03 11:44:00,252 INFO  [io.deb.uti.Threads] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Requested thread factory for connector PostgresConnector, id = dbzserver named = keep-alive
+2024-04-03 11:44:00,253 INFO  [io.deb.uti.Threads] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Creating thread debezium-postgresconnector-dbzserver-keep-alive
+2024-04-03 11:44:00,257 INFO  [io.deb.con.pos.PostgresSchema] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) REPLICA IDENTITY for 'inventory.customers' is 'FULL'; UPDATE AND DELETE events will contain the previous values of all the columns
+2024-04-03 11:44:00,258 INFO  [io.deb.con.pos.PostgresStreamingChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Searching for WAL resume position
 
 ...</code></pre>
 </div>
@@ -326,30 +363,34 @@ debezium.sink.http.url=https://webhook.site/&lt;YOUR_INDIVIDUAL_UUID_HERE&gt;</c
         ...
     },
     "payload": {
-        "before": null,
-        "after": {
-            "id": 1001,
-            "first_name": "Sally",
-            "last_name": "Thomas",
-            "email": "sally.thomas@acme.com"
-        },
-        "source": {
-            "version": "2.2.1.Final",
-            "connector": "postgresql",
-            "name": "dbzserver",
-            "ts_ms": 1688544911359,
-            "snapshot": "first",
-            "db": "postgres",
-            "sequence": "[null,\"33813288\"]",
-            "schema": "inventory",
-            "table": "customers",
-            "txId": 752,
-            "lsn": 33813288,
-            "xmin": null
-        },
-        "op": "r",
-        "ts_ms": 1688544911409,
-        "transaction": null
+      "before": null,
+      "after": {
+        "id": 1001,
+        "first_name": "Sally",
+        "last_name": "Thomas",
+        "email": "sally.thomas@acme.com"
+      },
+      "source": {
+        "version": "2.6.0.Final",
+        "connector": "postgresql",
+        "name": "dbzserver",
+        "ts_ms": 1712144640133,
+        "snapshot": "first",
+        "db": "postgres",
+        "sequence": "[null,\"33795376\"]",
+        "ts_us": 1712144640133063,
+        "ts_ns": 1712144640133063000,
+        "schema": "inventory",
+        "table": "customers",
+        "txId": 758,
+        "lsn": 33795376,
+        "xmin": null
+      },
+      "op": "r",
+      "ts_ms": 1712144640198,
+      "ts_us": 1712144640198571,
+      "ts_ns": 1712144640198571000,
+      "transaction": null
     }
 }</code></pre>
 </div>
@@ -364,15 +405,15 @@ debezium.sink.http.url=https://webhook.site/&lt;YOUR_INDIVIDUAL_UUID_HERE&gt;</c
 <div class="ulist tabs">
 <ul>
 <li>
-<p><a id="tabset2_podman"></a>Podman</p>
+<p><a id="tabset3_podman"></a>Podman</p>
 </li>
 <li>
-<p><a id="tabset2_docker"></a>Docker</p>
+<p><a id="tabset3_docker"></a>Docker</p>
 </li>
 </ul>
 </div>
 <div class="content">
-<div class="tab-pane" aria-labelledby="tabset2_podman">
+<div class="tab-pane" aria-labelledby="tabset3_podman">
 <div class="paragraph">
 <p>First, let&#8217;s exec into the database container&#8217;s shell.</p>
 </div>
@@ -382,7 +423,7 @@ debezium.sink.http.url=https://webhook.site/&lt;YOUR_INDIVIDUAL_UUID_HERE&gt;</c
 </div>
 </div>
 </div>
-<div class="tab-pane" aria-labelledby="tabset2_docker">
+<div class="tab-pane" aria-labelledby="tabset3_docker">
 <div class="paragraph">
 <p>First, let&#8217;s exec into the database container&#8217;s shell.</p>
 </div>
@@ -459,21 +500,25 @@ SELECT * FROM inventory.customers;</code></pre>
       "email": "sally.thomas@acme.com"
     },
     "source": {
-      "version": "2.2.1.Final",
+      "version": "2.6.0.Final",
       "connector": "postgresql",
       "name": "dbzserver",
-      "ts_ms": 1688350963737,
+      "ts_ms": 1712145927919,
       "snapshot": "false",
       "db": "postgres",
-      "sequence": "[\"34442224\",\"34466112\"]",
+      "sequence": "[\"34481056\",\"34482296\"]",
+      "ts_us": 1712145927919125,
+      "ts_ns": 1712145927919125000,
       "schema": "inventory",
       "table": "customers",
-      "txId": 767,
-      "lsn": 34466112,
+      "txId": 773,
+      "lsn": 34482296,
       "xmin": null
     },
     "op": "u",
-    "ts_ms": 1688551202591,
+    "ts_ms": 1712145928163,
+    "ts_us": 1712145928163459,
+    "ts_ns": 1712145928163459000,
     "transaction": null
   }
 }</code></pre>
@@ -502,21 +547,25 @@ SELECT * FROM inventory.customers;</code></pre>
     },
     "after": null,
     "source": {
-      "version": "2.2.1.Final",
+      "version": "2.6.0.Final",
       "connector": "postgresql",
       "name": "dbzserver",
-      "ts_ms": 1688350963772,
+      "ts_ms": 1712145927922,
       "snapshot": "false",
       "db": "postgres",
-      "sequence": "[\"34466672\",\"34466672\"]",
+      "sequence": "[\"34482856\",\"34482856\"]",
+      "ts_us": 1712145927922366,
+      "ts_ns": 1712145927922366000,
       "schema": "inventory",
       "table": "customers",
-      "txId": 768,
-      "lsn": 34466672,
+      "txId": 774,
+      "lsn": 34482856,
       "xmin": null
     },
     "op": "d",
-    "ts_ms": 1688551202591,
+    "ts_ms": 1712145928164,
+    "ts_us": 1712145928164772,
+    "ts_ns": 1712145928164772000,
     "transaction": null
   }
 }</code></pre>
@@ -530,43 +579,64 @@ SELECT * FROM inventory.customers;</code></pre>
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="_1_stop_debezium_server"><a class="anchor" href="#_1_stop_debezium_server"></a>1. Stop Debezium Server</h3>
+<div class="tabset is-loading">
+<div class="ulist tabs">
+<ul>
+<li>
+<p><a id="tabset4_podman"></a>Podman</p>
+</li>
+<li>
+<p><a id="tabset4_docker"></a>Docker</p>
+</li>
+</ul>
+</div>
+<div class="content">
+<div class="tab-pane" aria-labelledby="tabset4_podman">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman stop dbz-server</code></pre>
+</div>
+</div>
+</div>
+<div class="tab-pane" aria-labelledby="tabset4_docker">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker stop dbz-server</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
 <div class="paragraph">
-<p>Switch to the terminal where you started Debezium Server and hit <code>CRTL+C</code> in order to shutdown the application. You should see a log output similar to the one below which informs about the shutdown.</p>
+<p>Switch to the terminal where you originally started Debezium Server. You should see a log output similar to the one below which informs about the shutdown.</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-none hljs">...
-^C2023-07-05 11:02:27,098 INFO  [io.deb.ser.DebeziumServer] (Shutdown thread) Received request to stop the engine
-2023-07-05 11:02:27,098 INFO  [io.deb.emb.EmbeddedEngine] (Shutdown thread) Stopping the embedded engine
-2023-07-05 11:02:27,099 INFO  [io.deb.emb.EmbeddedEngine] (Shutdown thread) Waiting for PT5M for connector to stop
-2023-07-05 11:02:27,472 INFO  [io.deb.emb.EmbeddedEngine] (pool-6-thread-1) Stopping the task and engine
-2023-07-05 11:02:27,473 INFO  [io.deb.con.com.BaseSourceTask] (pool-6-thread-1) Stopping down connector
-2023-07-05 11:02:27,744 INFO  [io.deb.jdb.JdbcConnection] (pool-12-thread-1) Connection gracefully closed
-2023-07-05 11:02:27,746 INFO  [io.deb.pip.ChangeEventSourceCoordinator] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Finished streaming
-2023-07-05 11:02:27,747 INFO  [io.deb.pip.ChangeEventSourceCoordinator] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Connected metrics set to 'false'
-2023-07-05 11:02:27,749 INFO  [io.deb.jdb.JdbcConnection] (pool-13-thread-1) Connection gracefully closed
-2023-07-05 11:02:27,751 INFO  [org.apa.kaf.con.sto.FileOffsetBackingStore] (pool-6-thread-1) Stopped FileOffsetBackingStore
-2023-07-05 11:02:27,752 INFO  [io.deb.ser.ConnectorLifecycle] (pool-6-thread-1) Connector completed: success = 'true', message = 'Connector 'io.debezium.connector.postgresql.PostgresConnector' completed normally.', error = 'null'
-2023-07-05 11:02:27,768 INFO  [io.quarkus] (Shutdown thread) debezium-server-dist stopped in 0.687s</code></pre>
+2024-04-03 12:17:07,615 INFO  [io.deb.ser.DebeziumServer] (Shutdown thread) Received request to stop the engine
+2024-04-03 12:17:07,616 INFO  [io.deb.emb.asy.AsyncEmbeddedEngine] (Shutdown thread) Engine state has changed from 'POLLING_TASKS' to 'STOPPING'
+2024-04-03 12:17:08,620 INFO  [io.deb.con.com.BaseSourceTask] (pool-8-thread-1) Stopping down connector
+2024-04-03 12:17:09,016 INFO  [io.deb.con.pos.PostgresStreamingChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) WAL resume position 'null' discovered
+2024-04-03 12:17:09,035 INFO  [io.deb.jdb.JdbcConnection] (pool-14-thread-1) Connection gracefully closed
+2024-04-03 12:17:09,054 INFO  [io.deb.uti.Threads] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Requested thread factory for connector PostgresConnector, id = dbzserver named = keep-alive
+2024-04-03 12:17:09,054 INFO  [io.deb.uti.Threads] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Creating thread debezium-postgresconnector-dbzserver-keep-alive
+2024-04-03 12:17:09,054 INFO  [io.deb.con.pos.PostgresStreamingChangeEventSource] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Processing messages
+2024-04-03 12:17:09,056 INFO  [io.deb.jdb.JdbcConnection] (pool-15-thread-1) Connection gracefully closed
+2024-04-03 12:17:09,057 INFO  [io.deb.pip.ChangeEventSourceCoordinator] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Finished streaming
+2024-04-03 12:17:09,057 INFO  [io.deb.pip.ChangeEventSourceCoordinator] (debezium-postgresconnector-dbzserver-change-event-source-coordinator) Connected metrics set to 'false'
+2024-04-03 12:17:09,059 INFO  [io.deb.pip.sig.SignalProcessor] (pool-8-thread-1) SignalProcessor stopped
+2024-04-03 12:17:09,059 INFO  [io.deb.ser.DefaultServiceRegistry] (pool-8-thread-1) Debezium ServiceRegistry stopped.
+2024-04-03 12:17:09,062 INFO  [io.deb.jdb.JdbcConnection] (pool-16-thread-1) Connection gracefully closed
+2024-04-03 12:17:09,064 INFO  [io.deb.jdb.JdbcConnection] (pool-17-thread-1) Connection gracefully closed
+2024-04-03 12:17:09,066 INFO  [io.deb.emb.asy.AsyncEmbeddedEngine] (Shutdown thread) Stopped task #1 out of 1 tasks (it took 444 ms to stop the task).
+2024-04-03 12:17:09,067 INFO  [io.deb.emb.asy.AsyncEmbeddedEngine] (pool-7-thread-1) Engine is stopped.
+2024-04-03 12:17:09,067 INFO  [io.deb.emb.asy.AsyncEmbeddedEngine] (pool-7-thread-1) Engine state has changed from 'STOPPING' to 'STOPPED'
+2024-04-03 12:17:09,068 INFO  [io.deb.ser.ConnectorLifecycle] (pool-7-thread-1) Connector completed: success = 'true', message = 'Connector 'io.debezium.connector.postgresql.PostgresConnector' completed normally.', error = 'null'
+2024-04-03 12:17:09,096 INFO  [io.quarkus] (Shutdown thread) debezium-server-dist stopped in 1.495s</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>If you look into your installation folder of Debezium Server, you&#8217;ll see an additional file called <code>offsets.dat</code> which was specified in the configuration to track and store the offsets:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-none hljs">.
-├── conf
-├── debezium-server-dist-2.2.1.Final-runner.jar
-├── lib
-├── lib_opt
-├── -&gt; offsets.dat &lt;-
-├── run.bat
-└── run.sh</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Thanks to this offset storage, Debezium Server can determine where to continue with capturing change events after it is being restarted.</p>
+<p>Go into the main folder where you cloned the Debezium tutorial into, and open the folder <code>apps/infra/elementary/dbz-server/data</code> which should now contain a file called <code>offsets.dat</code>. This file was specified in the configuration to track and store the offsets. Thanks to this offset storage, Debezium Server can determine where to continue with capturing change events after it has been restarted.</p>
 </div>
 </div>
 <div class="sect2">
@@ -575,15 +645,15 @@ SELECT * FROM inventory.customers;</code></pre>
 <div class="ulist tabs">
 <ul>
 <li>
-<p><a id="tabset3_podman"></a>Podman</p>
+<p><a id="tabset5_podman"></a>Podman</p>
 </li>
 <li>
-<p><a id="tabset3_docker"></a>Docker</p>
+<p><a id="tabset5_docker"></a>Docker</p>
 </li>
 </ul>
 </div>
 <div class="content">
-<div class="tab-pane" aria-labelledby="tabset3_podman">
+<div class="tab-pane" aria-labelledby="tabset5_podman">
 <div class="paragraph">
 <p>First, let&#8217;s exec into the database container&#8217;s shell.</p>
 </div>
@@ -593,7 +663,7 @@ SELECT * FROM inventory.customers;</code></pre>
 </div>
 </div>
 </div>
-<div class="tab-pane" aria-labelledby="tabset3_docker">
+<div class="tab-pane" aria-labelledby="tabset5_docker">
 <div class="paragraph">
 <p>First, let&#8217;s exec into the database container&#8217;s shell.</p>
 </div>
@@ -646,10 +716,38 @@ SELECT * FROM inventory.customers;</code></pre>
 <div class="sect2">
 <h3 id="_3_restart_debezium_server"><a class="anchor" href="#_3_restart_debezium_server"></a>3. Restart Debezium Server</h3>
 <div class="paragraph">
-<p>Switch to the terminal where you previously stopped Debezium Server and restart it again with <code>./run.sh</code> (Linux / Mac OS) or <code>run.bat</code> (Windows).</p>
+<p>Use the same command and configuration as for the original Debezium Server container start.</p>
+</div>
+<div class="tabset is-loading">
+<div class="ulist tabs">
+<ul>
+<li>
+<p><a id="tabset6_podman"></a>Podman</p>
+</li>
+<li>
+<p><a id="tabset6_docker"></a>Docker</p>
+</li>
+</ul>
+</div>
+<div class="content">
+<div class="tab-pane" aria-labelledby="tabset6_podman">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman run -it --rm --name dbz-server --pod dbz -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data quay.io/debezium/server:2.6.0.Final</code></pre>
+</div>
+</div>
+</div>
+<div class="tab-pane" aria-labelledby="tabset6_docker">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker run -it --rm --name dbz-server -v $(PWD)/apps/infra/elementary/dbz-server/config:/debezium/conf -v $(PWD)/apps/infra/elementary/dbz-server/data:/debezium/data -p 8080:8080 --link postgres:postgres quay.io/debezium/server:2.6.0.Final</code></pre>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div class="paragraph">
-<p>Based on the configured <code>offsets.dat</code> file Debezium Server will figure out where to continue streaming change events from and it does so in order to capture the three data changes that have been made during the self-induced "CDC downtime" by stopping Debezium Server.</p>
+<p>Based on the configured <code>offsets.dat</code> file Debezium Server will figure out where to continue streaming change events from and it does so in order to capture the three data changes that have been made during the self-induced "CDC downtime" due to stopping Debezium Server.</p>
 </div>
 </div>
 <div class="sect2">
@@ -672,49 +770,43 @@ SELECT * FROM inventory.customers;</code></pre>
 <h2 id="_clean_up"><a class="anchor" href="#_clean_up"></a>Clean up</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Let&#8217;s remove the components for this demo scenario.</p>
+<p>Let’s remove all data infrastructure components for this demo scenario by stopping all related containers.</p>
 </div>
-<div class="sect2">
-<h3 id="_1_stop_debezium_server_2"><a class="anchor" href="#_1_stop_debezium_server_2"></a>1. Stop Debezium Server</h3>
-<div class="paragraph">
-<p>Switch to the terminal where Debezium Server is still running and hit <code>CTRL+C</code> to request a shutdown.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_2_stop_the_postgresql_container"><a class="anchor" href="#_2_stop_the_postgresql_container"></a>2. Stop the postgreSQL container</h3>
 <div class="tabset is-loading">
 <div class="ulist tabs">
 <ul>
 <li>
-<p><a id="tabset4_podman"></a>Podman</p>
+<p><a id="tabset7_podman"></a>Podman</p>
 </li>
 <li>
-<p><a id="tabset4_docker"></a>Docker</p>
+<p><a id="tabset7_docker"></a>Docker</p>
 </li>
 </ul>
 </div>
 <div class="content">
-<div class="tab-pane" aria-labelledby="tabset4_podman">
+<div class="tab-pane" aria-labelledby="tabset7_podman">
 <div class="listingblock console-input">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman stop postgres</code></pre>
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">podman pod rm -f dbz</code></pre>
 </div>
 </div>
 <div class="listingblock console-output">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">postgres</code></pre>
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">#YOUR DELETED POD's ID HERE e.g.
+dddce3b213c4aa9726ed6d78a6126d2f5722402c6ebbe8483dbcb369988a88f5</code></pre>
 </div>
 </div>
 </div>
-<div class="tab-pane" aria-labelledby="tabset4_docker">
+<div class="tab-pane" aria-labelledby="tabset7_docker">
 <div class="listingblock console-input">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker stop postgres</code></pre>
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">docker stop postgres dbz-server</code></pre>
 </div>
 </div>
 <div class="listingblock console-output">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">postgres</code></pre>
+<pre class="highlightjs highlight"><code class="language-adoc hljs" data-lang="adoc">postgres
+dbz-server</code></pre>
 </div>
 </div>
 </div>
@@ -722,7 +814,6 @@ SELECT * FROM inventory.customers;</code></pre>
 </div>
 <div class="paragraph">
 <p>🎉 <strong>Congrats on building your first change data capture pipeline with Debezium Server!</strong> 🎊</p>
-</div>
 </div>
 </div>
 </div>
