@@ -61,7 +61,11 @@ docker ps
 [.console-output]
 [source,adoc]
 ----
-...
+CONTAINER ID  IMAGE                                     COMMAND               CREATED         STATUS         PORTS                   NAMES
+c5bcbd907ab7  quay.io/strimzi/kafka:0.40.0-kafka-3.7.0  /bin/sh -c ./bin/...  15 seconds ago  Up 11 seconds  0.0.0.0:9092->9092/tcp  kafka
+85198a7a8c97  quay.io/debezium/example-mysql:2.6.0.Final        mysqld                14 seconds ago  Up 10 seconds  0.0.0.0:3306->3306/tcp  mysql
+808a633208b7  quay.io/debezium/connect:2.6.0.Final              start                 12 seconds ago  Up 9 seconds   0.0.0.0:8083->8083/tcp  connect
+4a401630ea8d  quay.io/debezium/debezium-ui:2.2                                11 seconds ago  Up 8 seconds   0.0.0.0:8080->8080/tcp  debezium-ui
 ----
 
 --
@@ -353,7 +357,12 @@ docker compose -f apps/infra/elementary/dbz-ui/compose.yaml down
 [.console-output]
 [source,adoc]
 ----
-...
+[+] Running 5/5
+ ✔ Container debezium-ui  Removed   0.2s
+ ✔ Container connect      Removed   0.6s
+ ✔ Container mysql        Removed   1.0s
+ ✔ Container kafka        Removed   1.1s
+ ✔ Network dbz-ui         Removed
 ----
 --
 ==== 
